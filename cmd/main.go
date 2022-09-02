@@ -18,9 +18,17 @@ func runRPC(args []string) {
 	// process cli flags/env vars
 	flags := handleFlags(args)
 
-	startMessage := rps.PrepareInitialMessage(flags)
+	startMessage, err := rps.PrepareInitialMessage(flags)
+	if err != nil {
+		log.Error(err.Error())
+		return
+	}
 
-	rpc := client.NewExecutor(*flags)
+	rpc, err := client.NewExecutor(*flags)
+	if err != nil {
+		log.Error(err.Error())
+		return
+	}
 	rpc.MakeItSo(startMessage)
 }
 
