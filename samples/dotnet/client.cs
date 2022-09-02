@@ -8,7 +8,7 @@ namespace clientAgent
     {
         // use appropriately named (.so/.dll) on desired OS
         [DllImport("rpclib.so", EntryPoint = "checkAccess")]
-        static extern void checkAccess();
+        static extern int checkAccess();
 
         // use appropriately named library (.so/.dll) on desired OS
         [DllImport("rpclib.so", EntryPoint = "rpcExec")]

@@ -19,5 +19,7 @@ const (
 	LMSPort = "16992"
 
 	// MPSServerMaxLength is the max length of the servername
-	MPSServerMaxLength = 256
+	MPSServerMaxLength    = 256
+	ReturnCode_SUCCESS    = 0
+	ReturnCode_BASIC_FAIL = -1
 )

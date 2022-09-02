@@ -5,18 +5,24 @@
 package main
 
 import (
+	"errors"
 	"os"
 	"rpc"
 	"rpc/internal/amt"
 	"rpc/internal/client"
 	"rpc/internal/rps"
+	"rpc/pkg/utils"
 
 	log "github.com/sirupsen/logrus"
 )
 
 func runRPC(args []string) {
 	// process cli flags/env vars
-	flags := handleFlags(args)
+	flags, err := handleFlags(args)
+	if err != nil {
+		log.Error(err.Error())
+		return
+	}
 
 	startMessage, err := rps.PrepareInitialMessage(flags)
 	if err != nil {
@@ -32,12 +38,12 @@ func runRPC(args []string) {
 	rpc.MakeItSo(startMessage)
 }
 
-func handleFlags(args []string) *rpc.Flags {
+func handleFlags(args []string) (*rpc.Flags, error) {
 	//process flags
 	flags := rpc.NewFlags(args)
-	_, result := flags.ParseFlags()
+	flagParsed, result := flags.ParseFlags()
 	if !result {
-		os.Exit(1)
+		return nil, errors.New("Failed parsing flag " + flagParsed)
 	}
 	if flags.Verbose {
 		log.SetLevel(log.TraceLevel)
@@ -62,20 +68,24 @@ func handleFlags(args []string) *rpc.Flags {
 			FullTimestamp: true,
 		})
 	}
-	return flags
+	return flags, nil
 }
 
 func main() {
 	// ensure we are admin/sudo
-	checkAdminAccess()
+	status := checkAdminAccess()
+	if status != utils.ReturnCode_SUCCESS {
+		return
+	}
 	runRPC(os.Args)
 }
 
-func checkAdminAccess() {
+func checkAdminAccess() int {
 	amt := amt.NewAMTCommand()
 	result, err := amt.Initialize()
 	if !result || err != nil {
 		log.Error(err) //Print the errors
-		os.Exit(1)
+		return utils.ReturnCode_BASIC_FAIL
 	}
+	return utils.ReturnCode_SUCCESS
 }
