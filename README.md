@@ -28,7 +28,7 @@ go build -o rpc ./cmd/main.go
 
 #### As Library: 
 ```
-go build -buildmode=c-shared -o rpc.so ./cmd   
+go build -buildmode=c-shared -o librpc.so.1.0 ./cmd   
 ```
 ### Docker image
 
