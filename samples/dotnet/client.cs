@@ -6,11 +6,24 @@ namespace clientAgent
 {
     class clientAgent
     {
-        [DllImport("librpc.so.1.0")]
+        // use appropriately named library (.so/.dll) on desired OS
+        // Linux [DllImport("rpc")]
+        // Win [DllImport("rpc.dll")]
+        [DllImport("rpc")]
+        static extern int rpcCheckAccess();
+
+        [DllImport("rpc")]
         static extern int rpcExec([In] byte[] rpccmd, ref IntPtr output);
 
         static void Main(string[] args)
         {
+            int returnCode;
+
+            Console.WriteLine("... CALLING rpcCheckAccess ...");
+            returnCode = rpcCheckAccess();
+            Console.WriteLine("... rpcCheckAccess completed: return code[" + returnCode + "] ");
+            Console.WriteLine();
+
             var res = "";
             foreach (var arg in args)
             {
@@ -22,8 +35,9 @@ namespace clientAgent
             // string res = "amtinfo";
 
             IntPtr output = IntPtr.Zero;
-            int returnCode = rpcExec(Encoding.ASCII.GetBytes(res), ref output);
-            Console.WriteLine("rpcExec completed: return code[" + returnCode + "] " + Marshal.PtrToStringAnsi(output));
+            Console.WriteLine("... CALLING rpcExec with argument string: " + res);
+            returnCode = rpcExec(Encoding.ASCII.GetBytes(res), ref output);
+            Console.WriteLine("... rpcExec completed: return code[" + returnCode + "] " + Marshal.PtrToStringAnsi(output));
         }
     }
 }

@@ -4,47 +4,49 @@
  **********************************************************************/
 package main
 
-import "C"
 import (
+	log "github.com/sirupsen/logrus"
 	"os"
 	"rpc"
 	"rpc/internal/amt"
 	"rpc/internal/client"
 	"rpc/internal/rps"
 	"rpc/pkg/utils"
-	"strings"
-
-	log "github.com/sirupsen/logrus"
 )
+
+const AccessErrMsg = "Failed to execute due to access issues. " +
+	"Please ensure that Intel ME is present, " +
+	"the MEI driver is installed, " +
+	"and the runtime has administrator or root privileges."
 
 func checkAccess() (int, error) {
 	amtCommand := amt.NewAMTCommand()
 	result, err := amtCommand.Initialize()
 	if !result || err != nil {
-		return utils.ReturnCode_ACCESS, err
+		return utils.ErrAccess, err
 	}
-	return utils.ReturnCode_SUCCESS, nil
+	return utils.Success, nil
 }
 
 func runRPC(args []string) (int, error) {
 	// process cli flags/env vars
 	flags, keepGoing := handleFlags(args)
 	if keepGoing == false {
-		return utils.ReturnCode_SUCCESS, nil
+		return utils.Success, nil
 	}
 
 	startMessage, err := rps.PrepareInitialMessage(flags)
 	if err != nil {
-		return utils.ReturnCode_GENERAL_ERR, err
+		return utils.ErrGeneralFailure, err
 	}
 
 	executor, err := client.NewExecutor(*flags)
 	if err != nil {
-		return utils.ReturnCode_GENERAL_ERR, err
+		return utils.ErrGeneralFailure, err
 	}
 
 	executor.MakeItSo(startMessage)
-	return utils.ReturnCode_SUCCESS, nil
+	return utils.Success, nil
 }
 
 func handleFlags(args []string) (*rpc.Flags, bool) {
@@ -80,14 +82,9 @@ func handleFlags(args []string) (*rpc.Flags, bool) {
 	return flags, true
 }
 
-const AccessErrMsg = "Failed to execute due to access issues. " +
-	"Please ensure that Intel ME is present, " +
-	"the MEI driver is installed, " +
-	"and the runtime has administrator or root privileges."
-
 func main() {
 	status, err := checkAccess()
-	if status != utils.ReturnCode_SUCCESS {
+	if status != utils.Success {
 		if err != nil {
 			log.Error(err.Error())
 		}
@@ -99,29 +96,4 @@ func main() {
 		log.Error(err.Error())
 	}
 	log.Info("Completed with status code: ", status)
-}
-
-//export rpcExec
-func rpcExec(Input *C.char, Output **C.char) int {
-	status, err := checkAccess()
-	if status != utils.ReturnCode_SUCCESS {
-		if err != nil {
-			log.Error(err.Error())
-		}
-		*Output = C.CString(AccessErrMsg)
-		return status
-	}
-
-	//create argument array from input string
-	inputString := C.GoString(Input)
-	args := strings.Fields(inputString)
-	args = append([]string{"rpc"}, args...)
-	status, err = runRPC(args)
-	if status != utils.ReturnCode_SUCCESS {
-		if err != nil {
-			log.Error(err.Error())
-		}
-		*Output = C.CString("rpcExec failed: " + inputString)
-	}
-	return status
 }
