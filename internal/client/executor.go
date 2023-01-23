@@ -11,6 +11,7 @@ import (
 	"rpc/internal/lm"
 	"rpc/internal/rps"
 	"rpc/pkg/utils"
+	"strings"
 	"syscall"
 
 	log "github.com/sirupsen/logrus"
@@ -149,7 +150,9 @@ func (e Executor) HandleDataFromRPS(dataFromServer []byte) bool {
 	for {
 		select {
 		case dataFromLM := <-e.data:
+			//log.Trace("before HandleDataFromLM: ", dataFromLM)
 			e.HandleDataFromLM(dataFromLM)
+			//log.Trace("after HandleDataFromLM: ", dataFromLM)
 			if e.isLME {
 				<-e.status
 			}
@@ -165,12 +168,76 @@ func (e Executor) HandleDataFromRPS(dataFromServer []byte) bool {
 
 func (e Executor) HandleDataFromLM(data []byte) {
 	if len(data) > 0 {
-		log.Debug("received data from LMX")
-		log.Trace(string(data))
-
+		log.Debug("received data from LMX:")
+		data = e.checkForJumbling(data)
 		err := e.server.Send(e.payload.CreateMessageResponse(data))
 		if err != nil {
 			log.Error(err)
 		}
+	}
+}
+
+var jumbleRsps = []string{
+	//"<g:AMT_GeneralSettings>",
+	//"<g:IPS_HostBasedSetupService>",
+	//"<a:Body><g:PullResponse><g:Items><h:AMT_EthernetPortSettings>",
+	//"<a:Body><g:AMT_EthernetPortSettings>",
+	//"CIM_WiFiEndpointSettings</c:ResourceURI></a:Header><a:Body><g:EnumerateResponse><g:EnumerationContext>",
+	//"CIM_WiFiEndpointSettings</c:ResourceURI></a:Header><a:Body><g:PullResponse>",
+	//"<a:Body><g:AMT_WiFiPortConfigurationService>",
+	//"<g:AMT_RedirectionService>",
+	//"<g:IPS_OptInService>",
+	//"<g:CIM_KVMRedirectionSAP>",
+	//"<g:AMT_RedirectionService>",
+	//"<g:IPS_OptInService>",
+	//"<g:AddTrustedRootCertificate_OUTPUT>",
+	//"<g:AddMpServer_OUTPUT>",
+	//"<a:Body><g:PullResponse><g:Items><h:AMT_ManagementPresenceRemoteSAP>",
+	//"<a:Body><g:AddRemoteAccessPolicyRule_OUTPUT>",
+	//"AMT_RemoteAccessPolicyAppliesToMPS</c:ResourceURI></a:Header><a:Body><g:EnumerateResponse>",
+	//"AMT_RemoteAccessPolicyAppliesToMPS</c:ResourceURI></a:Header><a:Body><g:PullResponse>",
+	//"<g:AMT_EnvironmentDetectionSettingData>",
+	//"<g:AMT_EnvironmentDetectionSettingData>",
+	// ---BEGIN: TLS state flow
+	"AMT_PublicKeyCertificate</c:ResourceURI></a:Header><a:Body><g:EnumerateResponse>",
+	"AMT_PublicKeyCertificate</c:ResourceURI></a:Header><a:Body><g:PullResponse>",
+	"AMT_PublicKeyManagementService</c:ResourceURI></a:Header><a:Body><g:AddTrustedRootCertificate_OUTPUT><g:CreatedCertificate>",
+	"AMT_PublicKeyManagementService</c:ResourceURI></a:Header><a:Body><g:GenerateKeyPair_OUTPUT>",
+	"AMT_PublicPrivateKeyPair</c:ResourceURI></a:Header><a:Body><g:EnumerateResponse>",
+	"AMT_PublicPrivateKeyPair</c:ResourceURI></a:Header><a:Body><g:PullResponse>",
+	"AMT_PublicKeyManagementService</c:ResourceURI></a:Header><a:Body><g:AddCertificate_OUTPUT><g:CreatedCertificate>",
+	"AMT_TLSCredentialContext</c:ResourceURI></a:Header><a:Body><g:ResourceCreated>",
+	"AMT_TimeSynchronizationService</c:ResourceURI></a:Header><a:Body><g:GetLowAccuracyTimeSynch_OUTPUT>",
+	"AMT_TimeSynchronizationService</c:ResourceURI></a:Header><a:Body><g:SetHighAccuracyTimeSynch_OUTPUT>",
+	"AMT_TLSSettingData</c:ResourceURI></a:Header><a:Body><g:EnumerateResponse>",
+	"AMT_TLSSettingData</c:ResourceURI></a:Header><a:Body><g:PullResponse>",
+	"AMT_TLSSettingData</c:ResourceURI></a:Header><a:Body><g:AMT_TLSSettingData>",
+	"</g:AcceptNonSecureConnections><g:ElementName>Intel(r) AMT 802.3 TLS Settings</g:ElementName>",
+	"</g:AcceptNonSecureConnections><g:ElementName>Intel(r) AMT LMS TLS Settings</g:ElementName>",
+	//"AMT_SetupAndConfigurationService</c:ResourceURI></a:Header><a:Body><g:CommitChanges_OUTPUT>",
+	// ---END: TLS state flow
+}
+var jumbleCounts = make([]int, len(jumbleRsps))
+
+func (e Executor) checkForJumbling(data []byte) []byte {
+
+	var shouldJumble = false
+	for i, v := range jumbleRsps {
+		if jumbleCounts[i] < 3 && strings.Contains(string(data), v) {
+			jumbleCounts[i]++
+			shouldJumble = jumbleCounts[i] < 3
+			log.Debug("jumbling", v)
+			break
+		}
+	}
+
+	if shouldJumble {
+		jumbles := strings.Split(string(data), "\r\n")
+		_, jumbles = jumbles[0], jumbles[1:]
+		var returnData = []byte(strings.Join(jumbles, ""))
+		log.Trace(string(returnData))
+		return returnData
+	} else {
+		return data
 	}
 }

@@ -130,6 +130,7 @@ func (lme *LMEConnection) Listen() {
 		lme.Session.Timer = time.NewTimer(2 * time.Second)
 		<-lme.Session.Timer.C
 		lme.Session.DataBuffer <- lme.Session.Tempdata
+		//log.Trace("lme.Session.Tempdata: ", lme.Session.Tempdata)
 		lme.Session.Tempdata = []byte{}
 		var bin_buf bytes.Buffer
 		// var windowAdjust apf.APF_CHANNEL_WINDOW_ADJUST_MESSAGE
