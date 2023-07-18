@@ -5,6 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"rpc/internal/config"
+	"rpc/internal/flags"
+	"rpc/internal/rps"
+	"rpc/pkg/utils"
 
 	"github.com/open-amt-cloud-toolkit/go-wsman-messages/pkg/amt"
 	"github.com/open-amt-cloud-toolkit/go-wsman-messages/pkg/amt/publickey"
@@ -17,20 +20,39 @@ import (
 )
 
 type LocalConfiguration struct {
+	flags       *flags.Flags
 	client      *wsman.Client
 	config      config.Config
 	amtMessages amt.Messages
 	ipsMessages ips.Messages
 }
 
-func NewLocalConfiguration(config config.Config, client *wsman.Client) LocalConfiguration {
+func NewLocalConfiguration(flags *flags.Flags) LocalConfiguration {
 	return LocalConfiguration{
-		client:      client,
-		config:      config,
+		flags:       flags,
+		client:      nil,
+		config:      flags.LocalConfig,
 		amtMessages: amt.NewMessages(),
 		ipsMessages: ips.NewMessages(),
 	}
+}
 
+// TODO: might need to pass in username,password instead
+func (local *LocalConfiguration) setupWsmanClient() bool {
+	var password string = local.config.Password
+	var username string = "admin"
+	if local.flags.UseCCM || local.flags.UseACM {
+		rpsPayload := rps.NewPayload()
+		lsa, err := rpsPayload.AMT.GetLocalSystemAccount()
+		if err != nil {
+			log.Error(err)
+			return false
+		}
+		password = lsa.Password
+		username = lsa.Username
+	}
+	local.client = wsman.NewClient("http://"+utils.LMSAddress+":"+utils.LMSPort+"/wsman", username, password, true)
+	return true
 }
 
 func (local *LocalConfiguration) Configure8021xWiFi() error {

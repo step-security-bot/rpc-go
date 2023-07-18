@@ -23,6 +23,7 @@ type AMTActivationServer struct {
 	flags *flags.Flags
 }
 
+// TODO: suggest this be renamed to RemoteProvisioningService
 func NewAMTActivationServer(flags *flags.Flags) AMTActivationServer {
 	amtactivationserver := AMTActivationServer{
 		URL:   flags.URL,

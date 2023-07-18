@@ -21,6 +21,12 @@ const (
 	// MPSServerMaxLength is the max length of the servername
 	MPSServerMaxLength = 256
 
+	CommandActivate    = "activate"
+	CommandAMTInfo     = "amtinfo"
+	CommandDeactivate  = "deactivate"
+	CommandMaintenance = "maintenance"
+	CommandVersion     = "version"
+
 	// Return Codes
 	Success = 0
 

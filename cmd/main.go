@@ -5,6 +5,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"rpc/internal/amt"
 	"rpc/internal/client"
@@ -13,7 +14,6 @@ import (
 	"rpc/internal/rps"
 	"rpc/pkg/utils"
 
-	"github.com/open-amt-cloud-toolkit/go-wsman-messages/pkg/wsman"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -33,31 +33,38 @@ func checkAccess() (int, error) {
 
 func runRPC(args []string) (int, error) {
 	// process cli flags/env vars
-	flags, keepgoing, status := handleFlags(args)
-	if !keepgoing {
-		return status, nil
+	//flags, keepgoing, status := handleFlags(args)
+	//if !keepgoing {
+	//	return status, nil
+	//}
+
+	flags, resultCode := parseCommandLine(args)
+	if resultCode != utils.Success {
+		return resultCode, nil
 	}
+
+	// need to prompt for password?
+	var passwordRequired bool
+	if flags.Command == utils.CommandActivate && flags.Local {
+		passwordRequired = true
+	} else if flags.Command == utils.CommandDeactivate {
+		if !flags.Local || flags.UseACM {
+			passwordRequired = true
+		}
+	}
+	if passwordRequired && flags.Password == "" {
+		fmt.Println("Please enter AMT Password: ")
+		var password string
+		_, err := fmt.Scanln(&password)
+		if password == "" || err != nil {
+			return utils.MissingOrIncorrectPassword, err
+		}
+		flags.Password = password
+	}
+
 	if flags.Local {
-		config := *flags.LocalConfig
-		var password string = config.Password
-		var username string = "admin"
-		if flags.UseCCM || flags.UseACM {
-			rpsPayload := rps.NewPayload()
-			lsa, err := rpsPayload.AMT.GetLocalSystemAccount()
-			if err != nil {
-				log.Error(err)
-				return -1, err
-			}
-			password = lsa.Password
-			username = lsa.Username
-		}
-		client := wsman.NewClient("http://"+utils.LMSAddress+":"+utils.LMSPort+"/wsman", username, password, true)
-		localConnection := local.NewLocalConfiguration(config, client)
-		if flags.UseCCM {
-			localConnection.ActivateCCM()
-		} else {
-			localConnection.Configure8021xWiFi()
-		}
+		local.ExecuteCommand(flags)
+
 	} else {
 		startMessage, err := rps.PrepareInitialMessage(flags)
 		if err != nil {
@@ -74,13 +81,41 @@ func runRPC(args []string) (int, error) {
 	return utils.Success, nil
 }
 
-func handleFlags(args []string) (*flags.Flags, bool, int) {
+//func handleFlags(args []string) (*flags.Flags, bool, int) {
+//	//process flags
+//	flags := flags.NewFlags(args)
+//	_, keepgoing, result := flags.ParseFlags()
+//	if !keepgoing {
+//		return nil, false, result
+//	}
+//
+//	if flags.Verbose {
+//		log.SetLevel(log.TraceLevel)
+//	} else {
+//		lvl, err := log.ParseLevel(flags.LogLevel)
+//		if err != nil {
+//			log.Warn(err)
+//			log.SetLevel(log.InfoLevel)
+//		} else {
+//			log.SetLevel(lvl)
+//		}
+//	}
+//
+//	if flags.JsonOutput {
+//		log.SetFormatter(&log.JSONFormatter{})
+//	} else {
+//		log.SetFormatter(&log.TextFormatter{
+//			DisableColors: true,
+//			FullTimestamp: true,
+//		})
+//	}
+//	return flags, true, utils.Success
+//}
+
+func parseCommandLine(args []string) (*flags.Flags, int) {
 	//process flags
 	flags := flags.NewFlags(args)
-	_, keepgoing, result := flags.ParseFlags()
-	if !keepgoing {
-		return nil, false, result
-	}
+	resultCode := flags.ParseFlags()
 
 	if flags.Verbose {
 		log.SetLevel(log.TraceLevel)
@@ -102,7 +137,7 @@ func handleFlags(args []string) (*flags.Flags, bool, int) {
 			FullTimestamp: true,
 		})
 	}
-	return flags, true, utils.Success
+	return flags, resultCode
 }
 
 func main() {

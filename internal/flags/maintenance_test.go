@@ -253,7 +253,7 @@ func TestParseFlagsMaintenance(t *testing.T) {
 	}
 }
 
-// TestHandleLocalCommand is a test function for handleLocalCommand method of Flags struct.
+// TestHandleLocalCommand is a test function for handleAddWifiSettings method of Flags struct.
 func TestHandleLocalCommand(t *testing.T) {
 	// Setup environment
 	os.Setenv("AMT_PASSWORD", "test_password")
@@ -266,13 +266,13 @@ func TestHandleLocalCommand(t *testing.T) {
 	expected := false
 	expectedErrorCode := utils.IncorrectCommandLineParameters
 
-	result, errorCode := flags.handleLocalCommand()
+	result, errorCode := flags.handleAddWifiSettings()
 
 	if result != expected {
-		t.Errorf("handleLocalCommand() = %v; want %v", result, expected)
+		t.Errorf("handleAddWifiSettings() = %v; want %v", result, expected)
 	}
 
 	if errorCode != expectedErrorCode {
-		t.Errorf("handleLocalCommand() error code = %v; want %v", errorCode, expectedErrorCode)
+		t.Errorf("handleAddWifiSettings() error code = %v; want %v", errorCode, expectedErrorCode)
 	}
 }
