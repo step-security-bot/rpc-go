@@ -52,12 +52,6 @@ func setCommandMethod(flags *flags.Flags) {
 		flags.Command += " --password " + flags.Password
 		break
 	case utils.CommandMaintenance:
-		// need to handle the following
-		// wantRpsCmd: "maintenance -" + argCurPw + " --synctime",
-		// wantRpsCmd: "maintenance -" + argCurPw + " --" + argSyncHostname,
-		// wantRpsCmd:   "maintenance -" + argCurPw + " --" + argSyncIp
-		// wantRpsCmd: "maintenance -" + argCurPw + " --" + argChangePw + " ",
-		// wantRpsCmd: "maintenance -" + argCurPw + " --" + argChangePw + " " + newPassword,
 		flags.Command += " -password " + flags.Password
 		task := flags.SubCommand
 		if task == "syncclock" {
