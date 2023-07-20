@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/url"
 	"rpc/internal/flags"
+	"rpc/pkg/utils"
 
 	"github.com/gorilla/websocket"
 	log "github.com/sirupsen/logrus"
@@ -21,6 +22,56 @@ type AMTActivationServer struct {
 	URL   string
 	Conn  *websocket.Conn
 	flags *flags.Flags
+}
+
+func ExecuteCommand(flags *flags.Flags) (int, error) {
+	resultCode := utils.Success
+	setCommandMethod(flags)
+
+	startMessage, err := PrepareInitialMessage(flags)
+	if err != nil {
+		return utils.MissingOrIncorrectPassword, err
+	}
+
+	executor, err := NewExecutor(*flags)
+	if err != nil {
+		return utils.ServerCerificateVerificationFailed, err
+	}
+
+	executor.MakeItSo(startMessage)
+
+	return resultCode, nil
+}
+
+func setCommandMethod(flags *flags.Flags) {
+	switch flags.Command {
+	case utils.CommandActivate:
+		flags.Command += " --profile " + flags.Profile
+		break
+	case utils.CommandDeactivate:
+		flags.Command += " --password " + flags.Password
+		break
+	case utils.CommandMaintenance:
+		// need to handle the following
+		// wantRpsCmd: "maintenance -" + argCurPw + " --synctime",
+		// wantRpsCmd: "maintenance -" + argCurPw + " --" + argSyncHostname,
+		// wantRpsCmd:   "maintenance -" + argCurPw + " --" + argSyncIp
+		// wantRpsCmd: "maintenance -" + argCurPw + " --" + argChangePw + " ",
+		// wantRpsCmd: "maintenance -" + argCurPw + " --" + argChangePw + " " + newPassword,
+		flags.Command += " -password " + flags.Password
+		task := flags.SubCommand
+		if task == "syncclock" {
+			task = "synctime"
+		}
+		flags.Command += " --" + task
+		if task == "changepassword" && flags.StaticPassword != "" {
+			flags.Command += " " + flags.StaticPassword
+		}
+		break
+	}
+	if flags.Force {
+		flags.Command += " -f"
+	}
 }
 
 // TODO: suggest this be renamed to RemoteProvisioningService

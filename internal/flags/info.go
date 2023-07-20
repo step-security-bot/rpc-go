@@ -18,6 +18,7 @@ type AmtInfoFlags struct {
 	Hostname bool
 }
 
+// TODO: write unit tests
 func (f *Flags) handleAMTInfo(amtInfoCommand *flag.FlagSet) int {
 	amtInfoCommand.BoolVar(&f.AmtInfo.Ver, "ver", false, "BIOS Version")
 	amtInfoCommand.BoolVar(&f.AmtInfo.Bld, "bld", false, "Build Number")

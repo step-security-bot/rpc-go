@@ -5,10 +5,8 @@
 package main
 
 import (
-	"fmt"
 	"os"
 	"rpc/internal/amt"
-	"rpc/internal/client"
 	"rpc/internal/flags"
 	"rpc/internal/local"
 	"rpc/internal/rps"
@@ -32,53 +30,17 @@ func checkAccess() (int, error) {
 }
 
 func runRPC(args []string) (int, error) {
-	// process cli flags/env vars
-	//flags, keepgoing, status := handleFlags(args)
-	//if !keepgoing {
-	//	return status, nil
-	//}
-
 	flags, resultCode := parseCommandLine(args)
 	if resultCode != utils.Success {
 		return resultCode, nil
 	}
-
-	// need to prompt for password?
-	var passwordRequired bool
-	if flags.Command == utils.CommandActivate && flags.Local {
-		passwordRequired = true
-	} else if flags.Command == utils.CommandDeactivate {
-		if !flags.Local || flags.UseACM {
-			passwordRequired = true
-		}
-	}
-	if passwordRequired && flags.Password == "" {
-		fmt.Println("Please enter AMT Password: ")
-		var password string
-		_, err := fmt.Scanln(&password)
-		if password == "" || err != nil {
-			return utils.MissingOrIncorrectPassword, err
-		}
-		flags.Password = password
-	}
-
+	var err error
 	if flags.Local {
-		local.ExecuteCommand(flags)
-
+		resultCode, err = local.ExecuteCommand(flags)
 	} else {
-		startMessage, err := rps.PrepareInitialMessage(flags)
-		if err != nil {
-			return utils.MissingOrIncorrectPassword, err
-		}
-
-		executor, err := client.NewExecutor(*flags)
-		if err != nil {
-			return utils.ServerCerificateVerificationFailed, err
-		}
-
-		executor.MakeItSo(startMessage)
+		resultCode, err = rps.ExecuteCommand(flags)
 	}
-	return utils.Success, nil
+	return resultCode, err
 }
 
 //func handleFlags(args []string) (*flags.Flags, bool, int) {

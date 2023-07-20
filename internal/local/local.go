@@ -1,6 +1,9 @@
 package local
 
 import (
+	"github.com/open-amt-cloud-toolkit/go-wsman-messages/pkg/wsman"
+	log "github.com/sirupsen/logrus"
+	"rpc/internal/amt"
 	"rpc/internal/flags"
 	"rpc/pkg/utils"
 )
@@ -15,9 +18,6 @@ func ExecuteCommand(flags *flags.Flags) (int, error) {
 	case utils.CommandVersion:
 		resultCode = localConfiguration.DisplayVersion()
 		break
-	}
-	if flags.Command == utils.CommandAMTInfo {
-		resultCode = localConfiguration.DisplayAMTInfo()
 	}
 	// figure out if need to use wsman calls or can do PTHI stuff
 	//var password string = config.Password
@@ -42,4 +42,24 @@ func ExecuteCommand(flags *flags.Flags) (int, error) {
 	//}
 
 	return resultCode, nil
+}
+
+// TODO: might need to pass in username,password instead
+func (local *LocalConfiguration) setupWsmanClient() bool {
+	var password string = local.config.Password
+	var username string = "admin"
+	// this system username password is only for local activation
+	// otherwise the password should be the AMT password from flags.
+	if local.flags.UseCCM || local.flags.UseACM {
+		amtCommand := amt.NewAMTCommand()
+		lsa, err := amtCommand.GetLocalSystemAccount()
+		if err != nil {
+			log.Error(err)
+			return false
+		}
+		password = lsa.Password
+		username = lsa.Username
+	}
+	local.client = wsman.NewClient("http://"+utils.LMSAddress+":"+utils.LMSPort+"/wsman", username, password, true)
+	return true
 }

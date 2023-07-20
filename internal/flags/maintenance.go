@@ -49,28 +49,33 @@ func (f *Flags) handleMaintenanceCommand() int {
 	switch f.SubCommand {
 	case "addwifisettings":
 		errCode = f.handleAddWifiSettings()
+		break
 	case "syncclock":
 		errCode = f.handleMaintenanceSyncClock()
+		break
 	case "synchostname":
 		errCode = f.handleMaintenanceSyncHostname()
+		break
 	case "syncip":
 		errCode = f.handleMaintenanceSyncIP()
+		break
 	case "changepassword":
 		errCode = f.handleMaintenanceSyncChangePassword()
+		break
 	default:
 		f.printMaintenanceUsage()
 		errCode = utils.IncorrectCommandLineParameters
+		break
 	}
 	if errCode != utils.Success {
 		return errCode
 	}
 
-	// TODO: handle this more centrally
-	//if f.Password == "" {
-	//	if _, errCode := f.readPasswordFromUser(); errCode != 0 {
-	//		return utils.MissingOrIncorrectPassword
-	//	}
-	//}
+	if f.Password == "" {
+		if _, errCode := f.readPasswordFromUser(); errCode != 0 {
+			return utils.MissingOrIncorrectPassword
+		}
+	}
 
 	// if this is a local command, then we dont care about -u or what task/command since its not going to the cloud
 	if !f.Local {

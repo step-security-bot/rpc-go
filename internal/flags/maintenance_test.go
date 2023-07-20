@@ -72,12 +72,12 @@ func TestParseFlagsMaintenance(t *testing.T) {
 		"should fail with usage - no additional arguments": {
 			cmdLine:    cmdBase,
 			wantResult: utils.IncorrectCommandLineParameters,
-			wantRpsCmd: "",
+			wantRpsCmd: utils.CommandMaintenance,
 		},
 		"should fail with usage - unhandled task": {
 			cmdLine:    cmdBase + " someothertask",
 			wantResult: utils.IncorrectCommandLineParameters,
-			wantRpsCmd: "",
+			wantRpsCmd: utils.CommandMaintenance,
 		},
 		"should fail - required websocket URL": {
 			cmdLine:    cmdBase + " " + argSyncClock + " " + argCurPw,
@@ -234,19 +234,14 @@ func TestParseFlagsMaintenance(t *testing.T) {
 			flags := NewFlags(args)
 			flags.amtCommand.PTHI = MockPTHICommands{}
 			flags.netEnumerator = testNetEnumerator
-			gotCommand, keepGoing, gotResult := flags.ParseFlags()
-			if gotResult == utils.Success {
-				assert.Equal(t, keepGoing, true)
-			} else {
-				assert.Equal(t, keepGoing, false)
-			}
+			gotResult := flags.ParseFlags()
 			if strings.Contains(tc.cmdLine, argAddWiFiSettings) {
 				assert.Equal(t, flags.Local, true)
 			} else {
 				assert.Equal(t, flags.Local, false)
 			}
 			assert.Equal(t, tc.wantResult, gotResult)
-			assert.Equal(t, "maintenance", gotCommand)
+			assert.Equal(t, utils.CommandMaintenance, flags.Command)
 			assert.Equal(t, tc.wantRpsCmd, flags.Command)
 			assert.Equal(t, tc.wantIPConfig, flags.IpConfiguration)
 		})
@@ -262,16 +257,8 @@ func TestHandleLocalCommand(t *testing.T) {
 	// Setup flags
 	flags := NewFlags(args)
 	flags.amtCommand.PTHI = MockPTHICommands{}
-
-	expected := false
 	expectedErrorCode := utils.IncorrectCommandLineParameters
-
-	result, errorCode := flags.handleAddWifiSettings()
-
-	if result != expected {
-		t.Errorf("handleAddWifiSettings() = %v; want %v", result, expected)
-	}
-
+	errorCode := flags.handleAddWifiSettings()
 	if errorCode != expectedErrorCode {
 		t.Errorf("handleAddWifiSettings() error code = %v; want %v", errorCode, expectedErrorCode)
 	}

@@ -3,7 +3,6 @@ package flags
 import (
 	"fmt"
 	"regexp"
-	"rpc/internal/config"
 	"rpc/pkg/utils"
 )
 
@@ -64,26 +63,23 @@ func (f *Flags) handleActivateCommand() int {
 			return utils.MissingOrIncorrectProfile
 		}
 	} else {
-		f.LocalConfig = config.Config{}
-
-		// TODO: move these logics to the execution location out of flags parsing
-		//if errCode := f.checkCurrentMode(); errCode != 0 {
-		//	return errCode
-		//}
-		//if f.Password == "" {
-		//	if _, errCode := f.readPasswordFromUser(); errCode != 0 {
-		//		return utils.MissingOrIncorrectPassword
-		//	}
-		//}
+		if errCode := f.checkCurrentMode(); errCode != 0 {
+			return errCode
+		}
+		if f.Password == "" {
+			if _, errCode := f.readPasswordFromUser(); errCode != 0 {
+				return utils.MissingOrIncorrectPassword
+			}
+		}
 		//f.UseCCM = true
 		//f.LocalConfig = &config.Config{}
-		//f.LocalConfig.Password = f.Password
+		f.LocalConfig.Password = f.Password
 
-		return utils.Success
+		//return utils.Success
 	}
 
 	// TODO: don't put the command together here cause prompt for PW at one place is better
-	f.Command = "activate --profile " + f.Profile
+	// f.Command = "activate --profile " + f.Profile
 	return utils.Success
 }
 
