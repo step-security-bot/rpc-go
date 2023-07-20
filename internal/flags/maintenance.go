@@ -76,6 +76,7 @@ func (f *Flags) handleMaintenanceCommand() int {
 			return utils.MissingOrIncorrectPassword
 		}
 	}
+	f.LocalConfig.Password = f.Password
 
 	// if this is a local command, then we dont care about -u or what task/command since its not going to the cloud
 	if !f.Local {
@@ -84,12 +85,6 @@ func (f *Flags) handleMaintenanceCommand() int {
 			f.amtMaintenanceCommand.Usage()
 			return utils.MissingOrIncorrectURL
 		}
-
-		// TODO: don't put the command together here cause prompt for PW at one place is better
-		//f.Command = fmt.Sprintf("maintenance --password %s %s", f.Password, task)
-		//if f.Force {
-		//	f.Command = f.Command + " -f"
-		//}
 	}
 
 	return utils.Success
@@ -111,7 +106,6 @@ func (f *Flags) handleAddWifiSettings() int {
 	f.amtMaintenanceAddWiFiSettingsCommand.StringVar(&f.LocalConfig.IEEE8021XSettings.ClientCert, "clientCert", "", "specify client certificate")
 	f.amtMaintenanceAddWiFiSettingsCommand.StringVar(&f.LocalConfig.IEEE8021XSettings.CACert, "caCert", "", "specify CA certificate")
 	f.amtMaintenanceAddWiFiSettingsCommand.StringVar(&f.LocalConfig.IEEE8021XSettings.PrivateKey, "privateKey", "", "specify private key")
-	f.Local = true
 
 	if err := f.amtMaintenanceAddWiFiSettingsCommand.Parse(f.commandLineArgs[3:]); err != nil {
 		f.amtMaintenanceAddWiFiSettingsCommand.Usage()
@@ -122,7 +116,7 @@ func (f *Flags) handleAddWifiSettings() int {
 		log.SetFormatter(&log.JSONFormatter{})
 	}
 	if f.configContent != "" {
-		err := cleanenv.ReadConfig(f.configContent, f.LocalConfig)
+		err := cleanenv.ReadConfig(f.configContent, &f.LocalConfig)
 		if err != nil {
 			log.Error("config error: ", err)
 			return utils.IncorrectCommandLineParameters
@@ -136,13 +130,6 @@ func (f *Flags) handleAddWifiSettings() int {
 			return utils.IncorrectCommandLineParameters
 		}
 	}
-	// TODO: handle AMTPassword more centrally
-	//if f.Password == "" {
-	//	if _, errCode := f.readPasswordFromUser(); errCode != 0 {
-	//		return utils.MissingOrIncorrectPassword
-	//	}
-	//}
-	//f.LocalConfig.Password = f.Password
 
 	return utils.Success
 }

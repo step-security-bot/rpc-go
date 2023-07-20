@@ -52,6 +52,8 @@ func (f *Flags) handleRemoteDeactivation() int {
 	}
 	return utils.Success
 }
+
+// TODO: move this to local package
 func (f *Flags) handleLocalDeactivation() int {
 	controlMode, err := f.amtCommand.GetControlMode()
 	if err != nil {
