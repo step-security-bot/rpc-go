@@ -24,23 +24,27 @@ type AMTActivationServer struct {
 	flags *flags.Flags
 }
 
-func ExecuteCommand(flags *flags.Flags) (int, error) {
+func ExecuteCommand(flags *flags.Flags) int {
 	resultCode := utils.Success
 	setCommandMethod(flags)
 
 	startMessage, err := PrepareInitialMessage(flags)
 	if err != nil {
-		return utils.MissingOrIncorrectPassword, err
+		log.Error(err)
+		// TODO: this error mapping is rather random?
+		return utils.MissingOrIncorrectPassword
 	}
 
 	executor, err := NewExecutor(*flags)
 	if err != nil {
-		return utils.ServerCerificateVerificationFailed, err
+		log.Error(err)
+		// TODO: this error mapping is rather random?
+		return utils.ServerCerificateVerificationFailed
 	}
 
 	executor.MakeItSo(startMessage)
 
-	return resultCode, nil
+	return resultCode
 }
 
 func setCommandMethod(flags *flags.Flags) {

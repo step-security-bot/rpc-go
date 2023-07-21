@@ -203,7 +203,7 @@ func (f *Flags) lookupEnvOrBool(key string, defaultVal bool) bool {
 	return defaultVal
 }
 
-func (f *Flags) readPasswordFromUser() (bool, int) {
+func (f *Flags) ReadPasswordFromUser() (bool, int) {
 	fmt.Println("Please enter AMT Password: ")
 	var password string
 	_, err := fmt.Scanln(&password)

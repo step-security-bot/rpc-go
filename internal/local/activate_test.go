@@ -1,35 +1,52 @@
-package local_test
+package local
 
 import (
-	"rpc/internal/config"
+	"errors"
+	"github.com/stretchr/testify/assert"
+	"net/http"
 	"rpc/internal/flags"
-	"rpc/internal/local"
+	"rpc/pkg/utils"
 	"testing"
 )
 
-func TestActivationCCM(t *testing.T) {
+func TestActivation(t *testing.T) {
 	f := &flags.Flags{}
-	f.LocalConfig = config.Config{
-		Password: "P@ssw0rd",
-	}
-	localConfiguration := local.NewLocalConfiguration(f)
-	localConfiguration.ActivateCCM()
+	f.Command = utils.CommandActivate
+	f.LocalConfig.Password = "P@ssw0rd"
 
-	//localConfig := config.Config{
-	//	Password: "P@ssw0rd",
-	//}
-	//// gets required information for us
-	//rpsPayload := rps.NewPayload()
-	//lsa, err := rpsPayload.AMT.GetLocalSystemAccount()
-	//if err != nil {
-	//	fmt.Println(err)
-	//	return
-	//}
-	//// payload.Username = lsa.Username
-	////localConfig.Password = lsa.Password
-	//
-	//
-	//client := wsman.NewClient("http://"+utils.LMSAddress+":"+utils.LMSPort+"/wsman", lsa.Username, lsa.Password, true)
-	//localConnection := local.NewLocalConfiguration(localConfig, client)
-	//localConnection.ActivateCCM()
+	t.Run("returns AMTConnectionFailed when GetControlMode fails", func(t *testing.T) {
+		lps := setupService(f)
+		mockControlModeErr = errors.New("yep it failew")
+		resultCode := lps.Activate()
+		assert.Equal(t, utils.AMTConnectionFailed, resultCode)
+		mockControlModeErr = nil
+	})
+
+	t.Run("returns UnableToActivate when already activated", func(t *testing.T) {
+		lps := setupService(f)
+		mockControlMode = 1
+		resultCode := lps.Activate()
+		assert.Equal(t, utils.UnableToActivate, resultCode)
+		mockControlMode = 0
+	})
+
+	t.Run("returns AMTConnectionFailed when GetLocalSystemAccount fails", func(t *testing.T) {
+		lps := setupService(f)
+		mockLocalSystemAccountErr = errors.New("yep it failew")
+		resultCode := lps.Activate()
+		assert.Equal(t, utils.AMTConnectionFailed, resultCode)
+		mockLocalSystemAccountErr = nil
+	})
+
+	t.Run("returns AMTFailed when CCM activate responses are not mocked", func(t *testing.T) {
+		handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			assert.Equal(t, "POST", r.Method)
+			w.WriteHeader(http.StatusInternalServerError)
+		})
+		f.UseCCM = false
+		lps := setupWithWsmanClient(f, handler)
+		resultCode := lps.Activate()
+		assert.Equal(t, utils.ActivationFailed, resultCode)
+		assert.Equal(t, true, f.UseCCM)
+	})
 }

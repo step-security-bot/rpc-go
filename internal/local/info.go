@@ -11,79 +11,79 @@ import (
 	"strings"
 )
 
-func (local *LocalConfiguration) DisplayAMTInfo() int {
+func (service *ProvisioningService) DisplayAMTInfo() int {
 	dataStruct := make(map[string]interface{})
 
 	amtCommand := amt.NewAMTCommand()
-	if local.flags.AmtInfo.Ver {
-		result, err := amtCommand.GetVersionDataFromME("AMT", local.flags.AMTTimeoutDuration)
+	if service.flags.AmtInfo.Ver {
+		result, err := amtCommand.GetVersionDataFromME("AMT", service.flags.AMTTimeoutDuration)
 		if err != nil {
 			log.Error(err)
 		}
 		dataStruct["amt"] = result
-		if !local.flags.JsonOutput {
+		if !service.flags.JsonOutput {
 			println("Version			: " + result)
 		}
 	}
-	if local.flags.AmtInfo.Bld {
-		result, err := amtCommand.GetVersionDataFromME("Build Number", local.flags.AMTTimeoutDuration)
+	if service.flags.AmtInfo.Bld {
+		result, err := amtCommand.GetVersionDataFromME("Build Number", service.flags.AMTTimeoutDuration)
 		if err != nil {
 			log.Error(err)
 		}
 		dataStruct["buildNumber"] = result
 
-		if !local.flags.JsonOutput {
+		if !service.flags.JsonOutput {
 			println("Build Number		: " + result)
 		}
 	}
-	if local.flags.AmtInfo.Sku {
-		result, err := amtCommand.GetVersionDataFromME("Sku", local.flags.AMTTimeoutDuration)
+	if service.flags.AmtInfo.Sku {
+		result, err := amtCommand.GetVersionDataFromME("Sku", service.flags.AMTTimeoutDuration)
 		if err != nil {
 			log.Error(err)
 		}
 		dataStruct["sku"] = result
 
-		if !local.flags.JsonOutput {
+		if !service.flags.JsonOutput {
 			println("SKU			: " + result)
 		}
 	}
-	if local.flags.AmtInfo.Ver && local.flags.AmtInfo.Sku {
+	if service.flags.AmtInfo.Ver && service.flags.AmtInfo.Sku {
 		result := decodeAMT(dataStruct["amt"].(string), dataStruct["sku"].(string))
 		dataStruct["features"] = strings.TrimSpace(result)
-		if !local.flags.JsonOutput {
+		if !service.flags.JsonOutput {
 			println("Features		: " + result)
 		}
 	}
-	if local.flags.AmtInfo.UUID {
+	if service.flags.AmtInfo.UUID {
 		result, err := amtCommand.GetUUID()
 		if err != nil {
 			log.Error(err)
 		}
 		dataStruct["uuid"] = result
 
-		if !local.flags.JsonOutput {
+		if !service.flags.JsonOutput {
 			println("UUID			: " + result)
 		}
 	}
-	if local.flags.AmtInfo.Mode {
+	if service.flags.AmtInfo.Mode {
 		result, err := amtCommand.GetControlMode()
 		if err != nil {
 			log.Error(err)
 		}
 		dataStruct["controlMode"] = utils.InterpretControlMode(result)
 
-		if !local.flags.JsonOutput {
+		if !service.flags.JsonOutput {
 			println("Control Mode		: " + string(utils.InterpretControlMode(result)))
 		}
 	}
-	if local.flags.AmtInfo.DNS {
+	if service.flags.AmtInfo.DNS {
 		result, err := amtCommand.GetDNSSuffix()
 		if err != nil {
 			log.Error(err)
 		}
 		dataStruct["dnsSuffix"] = result
 
-		if !local.flags.JsonOutput {
+		if !service.flags.JsonOutput {
 			println("DNS Suffix		: " + string(result))
 		}
 		result, err = amtCommand.GetOSDNSSuffix()
@@ -92,43 +92,43 @@ func (local *LocalConfiguration) DisplayAMTInfo() int {
 		}
 		dataStruct["dnsSuffixOS"] = result
 
-		if !local.flags.JsonOutput {
+		if !service.flags.JsonOutput {
 			fmt.Println("DNS Suffix (OS)		: " + result)
 		}
 	}
-	if local.flags.AmtInfo.Hostname {
+	if service.flags.AmtInfo.Hostname {
 		result, err := os.Hostname()
 		if err != nil {
 			log.Error(err)
 		}
 		dataStruct["hostnameOS"] = result
-		if !local.flags.JsonOutput {
+		if !service.flags.JsonOutput {
 			println("Hostname (OS)		: " + string(result))
 		}
 	}
 
-	if local.flags.AmtInfo.Ras {
+	if service.flags.AmtInfo.Ras {
 		result, err := amtCommand.GetRemoteAccessConnectionStatus()
 		if err != nil {
 			log.Error(err)
 		}
 		dataStruct["ras"] = result
 
-		if !local.flags.JsonOutput {
+		if !service.flags.JsonOutput {
 			println("RAS Network      	: " + result.NetworkStatus)
 			println("RAS Remote Status	: " + result.RemoteStatus)
 			println("RAS Trigger      	: " + result.RemoteTrigger)
 			println("RAS MPS Hostname 	: " + result.MPSHostname)
 		}
 	}
-	if local.flags.AmtInfo.Lan {
+	if service.flags.AmtInfo.Lan {
 		wired, err := amtCommand.GetLANInterfaceSettings(false)
 		if err != nil {
 			log.Error(err)
 		}
 		dataStruct["wiredAdapter"] = wired
 
-		if !local.flags.JsonOutput && wired.MACAddress != "00:00:00:00:00:00" {
+		if !service.flags.JsonOutput && wired.MACAddress != "00:00:00:00:00:00" {
 			println("---Wired Adapter---")
 			println("DHCP Enabled 		: " + strconv.FormatBool(wired.DHCPEnabled))
 			println("DHCP Mode    		: " + wired.DHCPMode)
@@ -143,7 +143,7 @@ func (local *LocalConfiguration) DisplayAMTInfo() int {
 		}
 		dataStruct["wirelessAdapter"] = wireless
 
-		if !local.flags.JsonOutput {
+		if !service.flags.JsonOutput {
 			println("---Wireless Adapter---")
 			println("DHCP Enabled 		: " + strconv.FormatBool(wireless.DHCPEnabled))
 			println("DHCP Mode    		: " + wireless.DHCPMode)
@@ -152,7 +152,7 @@ func (local *LocalConfiguration) DisplayAMTInfo() int {
 			println("MAC Address  		: " + wireless.MACAddress)
 		}
 	}
-	if local.flags.AmtInfo.Cert {
+	if service.flags.AmtInfo.Cert {
 		result, err := amtCommand.GetCertificateHashes()
 		if err != nil {
 			log.Error(err)
@@ -162,7 +162,7 @@ func (local *LocalConfiguration) DisplayAMTInfo() int {
 			certs[v.Name] = v
 		}
 		dataStruct["certificateHashes"] = certs
-		if !local.flags.JsonOutput {
+		if !service.flags.JsonOutput {
 			println("Certificate Hashes	:")
 			for _, v := range result {
 				print(v.Name + " (")
@@ -177,7 +177,7 @@ func (local *LocalConfiguration) DisplayAMTInfo() int {
 			}
 		}
 	}
-	if local.flags.JsonOutput {
+	if service.flags.JsonOutput {
 		outBytes, err := json.MarshalIndent(dataStruct, "", "  ")
 		output := string(outBytes)
 		if err != nil {

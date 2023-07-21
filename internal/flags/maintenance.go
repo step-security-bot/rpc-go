@@ -72,7 +72,7 @@ func (f *Flags) handleMaintenanceCommand() int {
 	}
 
 	if f.Password == "" {
-		if _, errCode := f.readPasswordFromUser(); errCode != 0 {
+		if _, errCode := f.ReadPasswordFromUser(); errCode != 0 {
 			return utils.MissingOrIncorrectPassword
 		}
 	}

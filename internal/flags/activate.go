@@ -63,35 +63,12 @@ func (f *Flags) handleActivateCommand() int {
 			return utils.MissingOrIncorrectProfile
 		}
 	} else {
-		if errCode := f.checkCurrentMode(); errCode != 0 {
-			return errCode
-		}
 		if f.Password == "" {
-			if _, errCode := f.readPasswordFromUser(); errCode != 0 {
+			if _, errCode := f.ReadPasswordFromUser(); errCode != 0 {
 				return utils.MissingOrIncorrectPassword
 			}
 		}
-		//f.UseCCM = true
-		//f.LocalConfig = &config.Config{}
 		f.LocalConfig.Password = f.Password
-
-		//return utils.Success
-	}
-
-	// TODO: don't put the command together here cause prompt for PW at one place is better
-	// f.Command = "activate --profile " + f.Profile
-	return utils.Success
-}
-
-func (f *Flags) checkCurrentMode() int {
-	controlMode, err := f.amtCommand.GetControlMode()
-	if err != nil {
-		fmt.Println("Unable to determine current control mode.")
-		return utils.ActivationFailed
-	}
-	if controlMode != 0 {
-		fmt.Println("Device is already activated")
-		return utils.UnableToActivate
 	}
 	return utils.Success
 }

@@ -29,18 +29,17 @@ func checkAccess() (int, error) {
 	return utils.Success, nil
 }
 
-func runRPC(args []string) (int, error) {
+func runRPC(args []string) int {
 	flags, resultCode := parseCommandLine(args)
 	if resultCode != utils.Success {
-		return resultCode, nil
+		return resultCode
 	}
-	var err error
 	if flags.Local {
-		resultCode, err = local.ExecuteCommand(flags)
+		resultCode = local.ExecuteCommand(flags)
 	} else {
-		resultCode, err = rps.ExecuteCommand(flags)
+		resultCode = rps.ExecuteCommand(flags)
 	}
-	return resultCode, err
+	return resultCode
 }
 
 //func handleFlags(args []string) (*flags.Flags, bool, int) {
@@ -111,7 +110,7 @@ func main() {
 	// 	log.Error(AccessErrMsg)
 	// 	os.Exit(status)
 	// }
-	_, _ = runRPC(os.Args)
+	_ = runRPC(os.Args)
 	// if err != nil {
 	// 	log.Error(err.Error())
 	// }

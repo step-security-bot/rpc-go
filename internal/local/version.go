@@ -6,10 +6,10 @@ import (
 	"strings"
 )
 
-func (local *LocalConfiguration) DisplayVersion() int {
+func (service *ProvisioningService) DisplayVersion() int {
 	output := ""
 
-	if !local.flags.JsonOutput {
+	if !service.flags.JsonOutput {
 		output += strings.ToUpper(utils.ProjectName) + "\n"
 		output += "Version " + utils.ProjectVersion + "\n"
 		output += "Protocol " + utils.ProtocolVersion + "\n"
@@ -17,7 +17,7 @@ func (local *LocalConfiguration) DisplayVersion() int {
 		println(output)
 	}
 
-	if local.flags.JsonOutput {
+	if service.flags.JsonOutput {
 		dataStruct := make(map[string]interface{})
 
 		projectName := strings.ToUpper(utils.ProjectName)

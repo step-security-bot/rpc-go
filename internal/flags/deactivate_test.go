@@ -1,7 +1,6 @@
 package flags
 
 import (
-	"errors"
 	"rpc/pkg/utils"
 	"testing"
 
@@ -24,13 +23,14 @@ func TestHandleDeactivateInvalidFlag(t *testing.T) {
 }
 
 func TestHandleDeactivateCommandNoPasswordPrompt(t *testing.T) {
+	password := "password"
 	args := []string{"./rpc", "deactivate", "-u", "wss://localhost"}
-	expected := "deactivate --password password"
-	defer userInput(t, "password")()
+	defer userInput(t, password)()
 	flags := NewFlags(args)
-	success := flags.handleDeactivateCommand()
+	success := flags.ParseFlags()
 	assert.EqualValues(t, success, utils.Success)
-	assert.Equal(t, expected, flags.Command)
+	assert.Equal(t, utils.CommandDeactivate, flags.Command)
+	assert.Equal(t, password, flags.Password)
 }
 func TestHandleDeactivateCommandNoPasswordPromptEmpy(t *testing.T) {
 	args := []string{"./rpc", "deactivate", "-u", "wss://localhost"}
@@ -48,9 +48,9 @@ func TestHandleDeactivateCommandNoURL(t *testing.T) {
 }
 func TestHandleDeactivateCommand(t *testing.T) {
 	args := []string{"./rpc", "deactivate", "-u", "wss://localhost", "--password", "password"}
-	expected := "deactivate --password password"
+	expected := utils.CommandDeactivate
 	flags := NewFlags(args)
-	success := flags.handleDeactivateCommand()
+	success := flags.ParseFlags()
 	assert.EqualValues(t, success, utils.Success)
 	assert.Equal(t, "wss://localhost", flags.URL)
 	assert.Equal(t, expected, flags.Command)
@@ -65,72 +65,59 @@ func TestHandleDeactivateCommandWithURLAndLocal(t *testing.T) {
 }
 func TestHandleDeactivateCommandWithForce(t *testing.T) {
 	args := []string{"./rpc", "deactivate", "-u", "wss://localhost", "--password", "password", "-f"}
-	expected := "deactivate --password password -f"
+	expected := utils.CommandDeactivate
 	flags := NewFlags(args)
-	success := flags.handleDeactivateCommand()
+	success := flags.ParseFlags()
 	assert.EqualValues(t, success, utils.Success)
 	assert.Equal(t, "wss://localhost", flags.URL)
+	assert.Equal(t, true, flags.Force)
 	assert.Equal(t, expected, flags.Command)
-}
-
-func TestHandleLocalDeactivationWithACM(t *testing.T) {
-	args := []string{"./rpc", "deactivate", "-local"}
-	flags := NewFlags(args)
-	flags.amtCommand.PTHI = MockPTHICommands{}
-	mode = 2
-	result = 0
-	errCode := flags.handleLocalDeactivation()
-	assert.Equal(t, errCode, utils.UnableToDeactivate)
-	mode = 0
 }
 
 func TestHandleLocalDeactivation(t *testing.T) {
 	args := []string{"./rpc", "deactivate", "-local"}
 	flags := NewFlags(args)
-	flags.amtCommand.PTHI = MockPTHICommands{}
-	mode = 1
-	result = 0
-	errCode := flags.handleLocalDeactivation()
+	errCode := flags.ParseFlags()
 	assert.Equal(t, errCode, utils.Success)
-	mode = 0
 }
 
-func TestHandleDeactivateCommandWithGetControlModeError(t *testing.T) {
-	args := []string{"./rpc", "deactivate", "-local"}
-	flags := NewFlags(args)
-	flags.amtCommand.PTHI = MockPTHICommands{}
-	mode = 1
-	result = 0
-	controlModeErr = errors.New("Failed to get control mode")
-	errCode := flags.handleDeactivateCommand()
-	assert.Equal(t, errCode, utils.DeactivationFailed)
-	mode = 0
-}
-
-func TestHandleLocalDeactivationwithUnprovisionError(t *testing.T) {
-	args := []string{"./rpc", "deactivate", "-local"}
-	flags := NewFlags(args)
-	flags.amtCommand.PTHI = MockPTHICommands{}
-	mode = 1
-	result = -1
-	controlModeErr = nil
-	errCode := flags.handleLocalDeactivation()
-	assert.Equal(t, errCode, utils.DeactivationFailed)
-	result = 0
-	mode = 0
-}
-
-func TestHandleDeactivationWithLocal(t *testing.T) {
-	args := []string{"./rpc", "deactivate", "-local"}
-	flags := NewFlags(args)
-	flags.amtCommand.PTHI = MockPTHICommands{}
-	mode = 1
-	result = 0
-	controlModeErr = nil
-	errCode := flags.handleDeactivateCommand()
-	assert.Equal(t, errCode, utils.Success)
-	mode = 0
-}
+// TODO: move to local package
+//func TestHandleDeactivateCommandWithGetControlModeError(t *testing.T) {
+//	args := []string{"./rpc", "deactivate", "-local"}
+//	flags := NewFlags(args)
+//	flags.amtCommand.PTHI = MockPTHICommands{}
+//	mode = 1
+//	result = 0
+//	controlModeErr = errors.New("Failed to get control mode")
+//	errCode := flags.handleDeactivateCommand()
+//	assert.Equal(t, errCode, utils.DeactivationFailed)
+//	mode = 0
+//}
+//
+//func TestHandleLocalDeactivationwithUnprovisionError(t *testing.T) {
+//	args := []string{"./rpc", "deactivate", "-local"}
+//	flags := NewFlags(args)
+//	flags.amtCommand.PTHI = MockPTHICommands{}
+//	mode = 1
+//	result = -1
+//	controlModeErr = nil
+//	errCode := flags.handleLocalDeactivation()
+//	assert.Equal(t, errCode, utils.DeactivationFailed)
+//	result = 0
+//	mode = 0
+//}
+//
+//func TestHandleDeactivationWithLocal(t *testing.T) {
+//	args := []string{"./rpc", "deactivate", "-local"}
+//	flags := NewFlags(args)
+//	flags.amtCommand.PTHI = MockPTHICommands{}
+//	mode = 1
+//	result = 0
+//	controlModeErr = nil
+//	errCode := flags.handleDeactivateCommand()
+//	assert.Equal(t, errCode, utils.Success)
+//	mode = 0
+//}
 
 func TestParseFlagsDeactivate(t *testing.T) {
 	args := []string{"./rpc", "deactivate"}

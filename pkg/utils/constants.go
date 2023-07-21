@@ -27,6 +27,12 @@ const (
 	CommandMaintenance = "maintenance"
 	CommandVersion     = "version"
 
+	SubCommandAddWifiSettings = "addwifisettings"
+	SubCommandChangePassword  = "changepassword"
+	SubCommandSyncClock       = "syncclock"
+	SubCommandSyncHostname    = "synchostname"
+	SubCommandSyncIP          = "syncip"
+
 	// Return Codes
 	Success = 0
 
