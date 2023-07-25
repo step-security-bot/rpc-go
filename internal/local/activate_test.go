@@ -16,7 +16,7 @@ func TestActivation(t *testing.T) {
 
 	t.Run("returns AMTConnectionFailed when GetControlMode fails", func(t *testing.T) {
 		lps := setupService(f)
-		mockControlModeErr = errors.New("yep it failew")
+		mockControlModeErr = errors.New("yep it failed")
 		resultCode := lps.Activate()
 		assert.Equal(t, utils.AMTConnectionFailed, resultCode)
 		mockControlModeErr = nil
@@ -32,7 +32,7 @@ func TestActivation(t *testing.T) {
 
 	t.Run("returns AMTConnectionFailed when GetLocalSystemAccount fails", func(t *testing.T) {
 		lps := setupService(f)
-		mockLocalSystemAccountErr = errors.New("yep it failew")
+		mockLocalSystemAccountErr = errors.New("yep it failed")
 		resultCode := lps.Activate()
 		assert.Equal(t, utils.AMTConnectionFailed, resultCode)
 		mockLocalSystemAccountErr = nil
@@ -49,4 +49,6 @@ func TestActivation(t *testing.T) {
 		assert.Equal(t, utils.ActivationFailed, resultCode)
 		assert.Equal(t, true, f.UseCCM)
 	})
+
+	
 }

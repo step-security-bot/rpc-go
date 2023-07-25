@@ -4,10 +4,13 @@ import (
 	"encoding/xml"
 	"errors"
 	"rpc/pkg/utils"
+	"encoding/base64"
+	"crypto/x509"
 
 	"github.com/open-amt-cloud-toolkit/go-wsman-messages/pkg/amt/general"
 	"github.com/open-amt-cloud-toolkit/go-wsman-messages/pkg/ips/hostbasedsetup"
 	log "github.com/sirupsen/logrus"
+	pkcs12 "software.sslmate.com/src/go-pkcs12"
 )
 
 func (service *ProvisioningService) Activate() int {
@@ -32,7 +35,7 @@ func (service *ProvisioningService) Activate() int {
 
 	// CCM is the only option supported currently
 	// (and is not required on the command line?)
-	service.flags.UseCCM = true
+	service.flags.UseACM = true
 
 	resultCode := utils.Success
 
@@ -46,8 +49,21 @@ func (service *ProvisioningService) Activate() int {
 }
 
 func (service *ProvisioningService) ActivateACM() int {
-	log.Error("local activation in Admin Control Mode not currently supported")
-	return utils.ActivationFailed
+	generalSettings, err := service.GetGeneralSettings()
+	if err != nil {
+		log.Error(err)
+		return utils.ActivationFailed
+	}
+	log.Info(generalSettings)
+	// getHostBasedSetupResponse, err := service.GetHostBasedSetupService()
+	// if err != nil {
+	// 	log.Error(err)
+	// 	return utils.ActivationFailed
+	// }
+	// log.Info(getHostBasedSetupResponse)
+	certObject, err := service.GetProvisioningCertObj()
+	log.Info(certObject)
+	return utils.Success
 }
 
 func (service *ProvisioningService) ActivateCCM() int {
@@ -94,4 +110,54 @@ func (service *ProvisioningService) HostBasedSetup(digestRealm string, password 
 		return utils.ActivationFailed, errors.New("unable to activate CCM, check to make sure the device is not alreacy activated")
 	}
 	return utils.Success, nil
+}
+
+func (service *ProvisioningService) GetHostBasedSetupService() (hostbasedsetup.Response, error) {
+	message := service.ipsMessages.HostBasedSetupService.Get()
+	response, err := service.client.Post(message)
+	log.Info(response)
+	if err != nil {
+		return hostbasedsetup.Response{}, err
+	}
+	var getHostBasedSetupResponse hostbasedsetup.Response
+	err = xml.Unmarshal([]byte(response), &getHostBasedSetupResponse)
+	if err != nil {
+		return hostbasedsetup.Response{}, err
+	}
+	return getHostBasedSetupResponse, nil
+}
+
+type CertsAndKeys struct {
+	Certs []x509.Certificate
+	Keys  []interface{}
+}
+
+func (service *ProvisioningService) GetProvisioningCertObj() (CertsAndKeys, error) {
+	// Read in cert
+	pfxb64 := base64.StdEncoding.EncodeToString([]byte(service.config.ProvisioningCert))
+
+	// Convert the certificate pfx to an object
+	pfxOut := CertsAndKeys{
+		Certs: []x509.Certificate{},
+		Keys:  []interface{}{},
+	}
+
+	pfxder, _ := base64.StdEncoding.DecodeString(pfxb64)
+	
+	privateKey, certificate, extraCerts, err := pkcs12.DecodeChain(pfxder, service.config.ProvisioningCertPwd)
+	if err != nil {
+		return pfxOut, errors.New("Decrypting provisioning certificate failed")
+	}
+	pfxOut.Keys = append(pfxOut.Keys, privateKey)
+	pfxOut.Certs = append(pfxOut.Certs, *certificate)
+	log.Info(extraCerts)
+	// pfxOut.Certs = append(pfxOut.Certs, extraCerts...)
+
+	return pfxOut, nil
+
+	// Return the certificate chain pems and private key
+	// CertChainPfx, err = DumpPfx(pfxobj)
+	// if err != nil {
+	// 	log.Fatalf("Failed to dump PFX: %v", err)
+	// }
 }

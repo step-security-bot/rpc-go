@@ -12,7 +12,7 @@ func (f *Flags) handleActivateCommand() int {
 	f.amtActivateCommand.StringVar(&f.Profile, "profile", f.lookupEnvOrString("PROFILE", ""), "name of the profile to use")
 	f.amtActivateCommand.BoolVar(&f.Local, "local", false, "activate amt locally")
 	f.amtActivateCommand.BoolVar(&f.UseCCM, "ccm", false, "activate in client control mode (CCM)")
-	// f.amtActivateCommand.BoolVar(&f.UseACM, "acm", false, "activate in admin control model (ACM)")
+	f.amtActivateCommand.BoolVar(&f.UseACM, "acm", false, "activate in admin control model (ACM)")
 	// use the Func call rather than StringVar to keep the default value out of the help/usage message
 	f.amtActivateCommand.Func("name", "friendly name to associate with this device", func(flagValue string) error {
 		f.FriendlyName = flagValue
@@ -63,6 +63,7 @@ func (f *Flags) handleActivateCommand() int {
 			return utils.MissingOrIncorrectProfile
 		}
 	} else {
+		f.Password = "P@ssw0rd" //Remove it
 		if f.Password == "" {
 			if _, errCode := f.ReadPasswordFromUser(); errCode != 0 {
 				return utils.MissingOrIncorrectPassword
