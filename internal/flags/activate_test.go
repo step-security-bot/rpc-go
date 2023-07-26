@@ -3,6 +3,7 @@ package flags
 import (
 	"os"
 	"rpc/pkg/utils"
+	"strings"
 	"testing"
 	"time"
 
@@ -138,6 +139,58 @@ func TestHandleActivateCommandBothURLandLocal(t *testing.T) {
 	flags := NewFlags(args)
 	success := flags.ParseFlags()
 	assert.EqualValues(t, success, utils.InvalidParameters)
+}
+
+func TestHandleActivateCommandLocal(t *testing.T) {
+
+	tests := map[string]struct {
+		cmdLine    string
+		wantResult int
+	}{
+		"should fail with both URL and local": {
+			cmdLine:    "./rpc activate -local -u wss://localhost",
+			wantResult: utils.InvalidParameters,
+		},
+		"should fail without acm or ccm specified": {
+			cmdLine:    "./rpc activate -local",
+			wantResult: utils.InvalidParameters,
+		},
+		"should fail if both acm and ccm specified": {
+			cmdLine:    "./rpc activate -local -acm -ccm",
+			wantResult: utils.InvalidParameters,
+		},
+		"should fail if acm and local config file error": {
+			cmdLine:    "./rpc activate -local -acm -config ./nofilehere.txt",
+			wantResult: utils.IncorrectCommandLineParameters,
+		},
+		"should fail if acm and ACM Settings not specified": {
+			cmdLine:    "./rpc activate -local -acm",
+			wantResult: utils.IncorrectCommandLineParameters,
+		},
+		"should pass if acm with example config file": {
+			cmdLine:    "./rpc activate -local -acm -config ../../config.yaml",
+			wantResult: utils.Success,
+		},
+		"should pass wif acm and ACM Settings specified": {
+			cmdLine: "./rpc activate -local -acm " +
+				" -amtPassword " + trickyPassword +
+				" -mebxPassword " + trickyPassword +
+				` -provisioningCert MIIW/gIBAzCCFroGCSqGSIb3DQEHAaCCFqsEghanMIIWozCCBgwGCSqGSIb3DQEHAaCCBf0EggX5MIIF9TCCBfEGCyqGSIb3DQEMCgECoIIE/jCCBPowHAYKKoZIhvc` +
+				" -provisioningCertPwd " + trickyPassword,
+			wantResult: utils.Success,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			args := strings.Fields(tc.cmdLine)
+			flags := NewFlags(args)
+			gotResult := flags.ParseFlags()
+			assert.Equal(t, tc.wantResult, gotResult)
+			assert.Equal(t, utils.CommandActivate, flags.Command)
+		})
+	}
+
 }
 
 // TODO: move to local package

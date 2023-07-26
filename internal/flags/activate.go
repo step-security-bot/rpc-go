@@ -2,6 +2,8 @@ package flags
 
 import (
 	"fmt"
+	log "github.com/sirupsen/logrus"
+	"reflect"
 	"regexp"
 	"rpc/pkg/utils"
 )
@@ -18,6 +20,12 @@ func (f *Flags) handleActivateCommand() int {
 		f.FriendlyName = flagValue
 		return nil
 	})
+	// for local activation in ACM mode need a few more items
+	f.amtActivateCommand.StringVar(&f.configContent, "config", "", "specify a config file ")
+	f.amtActivateCommand.StringVar(&f.LocalConfig.ACMSettings.AMTPassword, "amtPassword", "", "amt password")
+	f.amtActivateCommand.StringVar(&f.LocalConfig.ACMSettings.MEBxPassword, "mebxPassword", "", "mebx password")
+	f.amtActivateCommand.StringVar(&f.LocalConfig.ACMSettings.ProvisioningCert, "provisioningCert", "", "provisioning certificate")
+	f.amtActivateCommand.StringVar(&f.LocalConfig.ACMSettings.ProvisioningCertPwd, "provisioningCertPwd", "", "provisioning certificate password")
 
 	if len(f.commandLineArgs) == 2 {
 		f.amtActivateCommand.PrintDefaults()
@@ -44,12 +52,28 @@ func (f *Flags) handleActivateCommand() int {
 		fmt.Println("provide either a 'url' or a 'local', but not both")
 		return utils.InvalidParameters
 	}
-	//if f.Local {
-	// if !f.UseCCM && !f.UseACM || f.UseCCM && f.UseACM {
-	// 	fmt.Println("must specify -ccm or -acm, but not both")
-	// 	return false, utils.InvalidParameters
-	// }
-	//}
+	if f.Local {
+		if !f.UseCCM && !f.UseACM || f.UseCCM && f.UseACM {
+			fmt.Println("must specify -ccm or -acm, but not both")
+			return utils.InvalidParameters
+		}
+
+		if f.UseACM {
+			resultCode := f.handleLocalConfig()
+			if resultCode != utils.Success {
+				return resultCode
+			}
+			// Check if all fields are filled
+			v := reflect.ValueOf(f.LocalConfig.ACMSettings)
+			for i := 0; i < v.NumField(); i++ {
+				if v.Field(i).Interface() == "" { // not checking 0 since authenticantProtocol can and needs to be 0 for EAP-TLS
+					log.Error("Missing value for field: ", v.Type().Field(i).Name)
+					return utils.IncorrectCommandLineParameters
+				}
+			}
+
+		}
+	}
 
 	if !f.Local {
 		if f.URL == "" {
