@@ -54,25 +54,41 @@ func (service *ProvisioningService) Activate() int {
 }
 
 func (service *ProvisioningService) ActivateACM() int {
+	checkErrorAndLog := func(err error) bool {
+		if err != nil {
+			log.Error(err)
+			return true
+		}
+		return false
+	}
+    // Extract the provisioning certificate
 	certObject, fingerPrint, err := service.GetProvisioningCertObj()
 	log.Info(certObject, fingerPrint)
-	if err != nil {
-		log.Error(err)
+	if checkErrorAndLog(err) {
 		return utils.ActivationFailed
 	}
+    // Check provisioning certificate is accepted by AMT
+	if checkErrorAndLog(service.CompareCertHashes(fingerPrint)) {
+		return utils.ActivationFailed
+	}
+
 	generalSettings, err := service.GetGeneralSettings()
-	if err != nil {
-		log.Error(err)
-		return utils.ActivationFailed
-	}
 	log.Info(generalSettings)
-	getHostBasedSetupResponse, err := service.GetHostBasedSetupService()
-	if err != nil {
-		log.Error(err)
+	if checkErrorAndLog(err) {
 		return utils.ActivationFailed
 	}
+
+	getHostBasedSetupResponse, err := service.GetHostBasedSetupService()
 	log.Info(getHostBasedSetupResponse)
+	if checkErrorAndLog(err) {
+		return utils.ActivationFailed
+	}
+
 	return utils.Success
+}
+
+func CompareCertHashes(fingerPrint string) {
+	panic("unimplemented")
 }
 
 func (service *ProvisioningService) ActivateCCM() int {
@@ -149,72 +165,68 @@ type CertificateObject struct {
 }
 
 type ProvisioningCertObj struct {
-	certChain []string
+	certChain  []string
 	privateKey crypto.PrivateKey
 }
 
+func cleanPEM(pem string) string {
+	pem = strings.Replace(pem, "-----BEGIN CERTIFICATE-----", "", -1)
+	return strings.Replace(pem, "-----END CERTIFICATE-----", "", -1)
+}
+
 func dumpPfx(pfxobj CertsAndKeys) (ProvisioningCertObj, string, error) {
+	if len(pfxobj.certs) == 0 {
+		return ProvisioningCertObj{}, "", errors.New("no certificates found")
+	}
+	if len(pfxobj.keys) == 0 {
+		return ProvisioningCertObj{}, "", errors.New("no private keys found")
+	}
 	var provisioningCertificateObj ProvisioningCertObj
 	var interObj []CertificateObject
 	var leaf CertificateObject
 	var root CertificateObject
 	var fingerprint string
 
-	if len(pfxobj.certs) > 0 {
-		for i, cert := range pfxobj.certs {
-			pemBlock := &pem.Block{
-				Type:  "CERTIFICATE",
-				Bytes: cert.Raw,
-			}
-			pem := string(pem.EncodeToMemory(pemBlock))
-			pem = strings.Replace(pem, "-----BEGIN CERTIFICATE-----", "", -1)
-		    pem = strings.Replace(pem, "-----END CERTIFICATE-----", "", -1)
-
-			if i == 0 {
-				leaf = CertificateObject{pem: pem, subject: cert.Subject.String(), issuer: cert.Issuer.String()}
-			} else if cert.Subject.String() == cert.Issuer.String() {
-				root = CertificateObject{pem: pem, subject: cert.Subject.String(), issuer: cert.Issuer.String()}
-				der := cert.Raw
-				hash := sha256.Sum256(der)
-				fingerprint = hex.EncodeToString(hash[:])
-			} else {
-				inter := CertificateObject{pem: pem, subject: cert.Subject.String(), issuer: cert.Issuer.String()}
-				interObj = append(interObj, inter)
-			}
+	for i, cert := range pfxobj.certs {
+		pemBlock := &pem.Block{
+			Type:  "CERTIFICATE",
+			Bytes: cert.Raw,
 		}
-	} else {
-		return ProvisioningCertObj{}, "", errors.New("no certificates found")
-	}
+		pem := cleanPEM(string(pem.EncodeToMemory(pemBlock)))
+		certificateObject := CertificateObject{pem: pem, subject: cert.Subject.String(), issuer: cert.Issuer.String()}
 
+		if i == 0 {
+			leaf = certificateObject
+		} else if cert.Subject.String() == cert.Issuer.String() {
+			root = certificateObject
+			der := cert.Raw
+			hash := sha256.Sum256(der)
+			fingerprint = hex.EncodeToString(hash[:])
+		} else {
+			interObj = append(interObj, certificateObject)
+		}
+	}
 	provisioningCertificateObj.certChain = append(provisioningCertificateObj.certChain, leaf.pem)
 	for _, inter := range interObj {
 		provisioningCertificateObj.certChain = append(provisioningCertificateObj.certChain, inter.pem)
 	}
 	provisioningCertificateObj.certChain = append(provisioningCertificateObj.certChain, root.pem)
-
-	if len(pfxobj.keys) > 0 {
-		provisioningCertificateObj.privateKey = pfxobj.keys[0]
-	}
+	provisioningCertificateObj.privateKey = pfxobj.keys[0]
 
 	return provisioningCertificateObj, fingerprint, nil
-
 }
 
 func convertPfxToObject(pfxb64 string, passphrase string) (CertsAndKeys, error) {
-	var pfxOut = CertsAndKeys{certs: []*x509.Certificate{}, keys: []interface{}{}}
 	pfx, err := base64.StdEncoding.DecodeString(pfxb64)
 	if err != nil {
-		return pfxOut, err
+		return CertsAndKeys{}, err
 	}
-
 	privateKey, certificate, extraCerts, err := pkcs12.DecodeChain(pfx, passphrase)
 	if err != nil {
-		return pfxOut, errors.New("Decrypting provisioning certificate failed")
+		return CertsAndKeys{}, errors.New("Decrypting provisioning certificate failed")
 	}
-
-	pfxOut.certs = append(pfxOut.certs, certificate)
-	pfxOut.certs = append(pfxOut.certs, extraCerts...)
-	pfxOut.keys = append(pfxOut.keys, privateKey)
+	certs := append([]*x509.Certificate{certificate}, extraCerts...)
+	pfxOut := CertsAndKeys{certs: certs, keys: []interface{}{privateKey}}
 
 	return pfxOut, nil
 }
@@ -228,17 +240,19 @@ func (service *ProvisioningService) GetProvisioningCertObj() (ProvisioningCertOb
 	result, fingerprint, err := dumpPfx(certsAndKeys)
 	if err != nil {
 		log.Error("Failed to convert the certificate pfx to an object", err)
-	} 
+	}
 	return result, fingerprint, nil
 }
 
-func (service *ProvisioningService) CompareCertHashes() () {
+func (service *ProvisioningService) CompareCertHashes(fingerPrint string) (error) {
 	result, err := service.amtCommand.GetCertificateHashes()
 	if err != nil {
 		log.Error(err)
 	}
-	certs := make(map[string]interface{})
 	for _, v := range result {
-		certs[v.Name] = v
+		if(v.Hash == fingerPrint) {
+		 return nil	
+		}
 	}
+	return errors.New("The root of the provisioning certificate does not match any of the trusted roots in AMT.")
 }

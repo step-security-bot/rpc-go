@@ -50,5 +50,4 @@ func TestActivation(t *testing.T) {
 		assert.Equal(t, true, f.UseCCM)
 	})
 
-	
 }

@@ -10,7 +10,9 @@
             "args": [
                 "activate",
                 "-local",
-                "useACM",
+                "-config",
+                "..\\config.yaml",
+                "-acm",
                 "-n",
                 "-v"
             ],
