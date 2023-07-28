@@ -83,12 +83,11 @@ func (service *ProvisioningService) ActivateACM() int {
 	if checkErrorAndLog(err) {
 		return utils.ActivationFailed
 	}
-
+	
+	if checkErrorAndLog(service.injectCertificate(certObject.certChain)) {
+		return utils.ActivationFailed
+	}
 	return utils.Success
-}
-
-func CompareCertHashes(fingerPrint string) {
-	panic("unimplemented")
 }
 
 func (service *ProvisioningService) ActivateCCM() int {
@@ -255,4 +254,36 @@ func (service *ProvisioningService) CompareCertHashes(fingerPrint string) (error
 		}
 	}
 	return errors.New("The root of the provisioning certificate does not match any of the trusted roots in AMT.")
+}
+
+func (service *ProvisioningService) injectCertificate(certChain []string) (error) {
+	firstIndex := 0
+    // lastIndex := len(ProvisioningCertObj.certChain) - 1
+	for _, v := range certChain{
+       if (v == certChain[firstIndex]) {
+		err := service.AddNextCertInChain(v, true, false)
+		if err != nil {
+			log.Error(err)
+		}
+	   }
+	}
+    return  nil
+}
+
+func (service *ProvisioningService) AddNextCertInChain(cert string, isLeaf bool, isRoot bool)  (error) {
+	cert = strings.Replace(cert, "\n", "\r\n", -1)
+	message := service.ipsMessages.HostBasedSetupService.AddNextCertInChain(cert, isLeaf, isRoot)
+	log.Info(message)
+	response, err := service.client.Post(message)
+	tempstring := string(response)
+	log.Info(tempstring)
+	if err != nil {
+		return err
+	}
+	var getHostBasedSetupResponse hostbasedsetup.Response
+	err = xml.Unmarshal([]byte(response), &getHostBasedSetupResponse)
+	if err != nil {
+		return err
+	}
+	return nil
 }
