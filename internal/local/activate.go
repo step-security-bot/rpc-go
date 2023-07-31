@@ -111,7 +111,10 @@ func (service *ProvisioningService) ActivateACM() int {
 	if checkErrorAndLog(err) {
 		return utils.ActivationFailed
 	}
-
+	
+	if checkErrorAndLog(service.injectCertificate(certObject.certChain)) {
+		return utils.ActivationFailed
+	}
 	return utils.Success
 }
 
@@ -309,7 +312,10 @@ func (service *ProvisioningService) AddNextCertInChain(cert string, isLeaf bool,
 	err = xml.Unmarshal([]byte(response), &addCertResponse)
 	if err != nil {
 		return err
-	} // Check for the ReturnValue != 0
+	} 
+	// if hostBasedSetupResponse.Body.AdminSetup_OUTPUT.ReturnValue != 0 {
+	// 	return -1, errors.New("unable to activate ACM")
+	// }
 	return nil
 }
 
@@ -380,9 +386,9 @@ func (service *ProvisioningService) sendAdminSetup(digestRealm string, nonce []b
 	if err != nil {
 		return -1, err
 	}
-	if hostBasedSetupResponse.Body.Setup_OUTPUT.ReturnValue != 0 {
-		return -1, errors.New("unable to activate ACM")
-	}
+	// if hostBasedSetupResponse.Body.AdminSetup_OUTPUT.ReturnValue != 0 {
+	// 	return -1, errors.New("unable to activate ACM")
+	// }
 	return utils.Success, nil
 }
 
