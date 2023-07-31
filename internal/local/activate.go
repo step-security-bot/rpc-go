@@ -2,6 +2,8 @@ package local
 
 import (
 	"crypto"
+	"crypto/rand"
+	"crypto/rsa"
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/base64"
@@ -79,14 +81,37 @@ func (service *ProvisioningService) ActivateACM() int {
 	}
 
 	getHostBasedSetupResponse, err := service.GetHostBasedSetupService()
-	log.Info(getHostBasedSetupResponse)
 	if checkErrorAndLog(err) {
 		return utils.ActivationFailed
 	}
-	
+	decodedNonce := getHostBasedSetupResponse.Body.IPS_HostBasedSetupService.ConfigurationNonce
+	fwNonce, err := base64.StdEncoding.DecodeString(decodedNonce)
+	if checkErrorAndLog(err) {
+		log.Error("Error decoding fwNonce:", err)
+		return utils.ActivationFailed
+	}
+
 	if checkErrorAndLog(service.injectCertificate(certObject.certChain)) {
 		return utils.ActivationFailed
 	}
+
+	nonce, err := service.generateNonce()
+	if checkErrorAndLog(err) {
+		return utils.ActivationFailed
+	}
+
+
+	signedSignature, err := service.createSignedString(nonce, fwNonce, certObject.privateKey)
+	log.Info(signedSignature)
+	if checkErrorAndLog(err) {
+		return utils.ActivationFailed
+	}
+
+	_, err = service.sendAdminSetup(generalSettings.Body.AMTGeneralSettings.DigestRealm, nonce, signedSignature)
+	if checkErrorAndLog(err) {
+		return utils.ActivationFailed
+	}
+
 	return utils.Success
 }
 
@@ -170,7 +195,8 @@ type ProvisioningCertObj struct {
 
 func cleanPEM(pem string) string {
 	pem = strings.Replace(pem, "-----BEGIN CERTIFICATE-----", "", -1)
-	return strings.Replace(pem, "-----END CERTIFICATE-----", "", -1)
+	pem = strings.Replace(pem, "-----END CERTIFICATE-----", "", -1)
+	return strings.Replace(pem, "\n", "", -1)
 }
 
 func dumpPfx(pfxobj CertsAndKeys) (ProvisioningCertObj, string, error) {
@@ -256,34 +282,113 @@ func (service *ProvisioningService) CompareCertHashes(fingerPrint string) (error
 	return errors.New("The root of the provisioning certificate does not match any of the trusted roots in AMT.")
 }
 
-func (service *ProvisioningService) injectCertificate(certChain []string) (error) {
+func (service *ProvisioningService) injectCertificate(certChain []string) error {
 	firstIndex := 0
-    // lastIndex := len(ProvisioningCertObj.certChain) - 1
-	for _, v := range certChain{
-       if (v == certChain[firstIndex]) {
-		err := service.AddNextCertInChain(v, true, false)
+	lastIndex := len(certChain) - 1
+
+	for i, cert := range certChain {
+		isLeaf := i == firstIndex
+		isRoot := i == lastIndex
+
+		err := service.AddNextCertInChain(cert, isLeaf, isRoot)
 		if err != nil {
 			log.Error(err)
+			return errors.New("Failed to add certificate to AMT.")
 		}
-	   }
 	}
-    return  nil
+	return nil
 }
 
 func (service *ProvisioningService) AddNextCertInChain(cert string, isLeaf bool, isRoot bool)  (error) {
-	cert = strings.Replace(cert, "\n", "\r\n", -1)
 	message := service.ipsMessages.HostBasedSetupService.AddNextCertInChain(cert, isLeaf, isRoot)
+	response, err := service.client.Post(message)
+	if err != nil {
+		return err
+	}
+	var addCertResponse hostbasedsetup.Response
+	err = xml.Unmarshal([]byte(response), &addCertResponse)
+	if err != nil {
+		return err
+	} // Check for the ReturnValue != 0
+	return nil
+}
+
+func (service *ProvisioningService) generateNonce() ([]byte, error) {
+	nonce := make([]byte, 20)
+	_, err := rand.Read(nonce)
+	if err != nil {
+		log.Error("Error generating nonce:", err)
+		return nil, err
+	}
+	return nonce, nil
+}
+
+func (service *ProvisioningService) signString(message []byte, privateKey crypto.PrivateKey) (string, error) {
+	rsaKey, ok := privateKey.(*rsa.PrivateKey)
+	if !ok {
+		return "", errors.New("not an RSA private key")
+	}
+	keyBytes := x509.MarshalPKCS1PrivateKey(rsaKey)
+	privatekeyPEM := pem.EncodeToMemory(
+		&pem.Block{
+				Type:  "RSA PRIVATE KEY",
+				Bytes: keyBytes,
+		},
+    )
+	block, _ := pem.Decode([]byte(string(privatekeyPEM)))
+	if block == nil {
+		return "", errors.New("failed to decode PEM block containing private key")
+	}
+	key, err := x509.ParsePKCS1PrivateKey(block.Bytes)
+	if err != nil {
+		return "", errors.New("failed to parse private key")
+	}
+
+	hashed := sha256.Sum256(message)
+	signature, err := rsa.SignPKCS1v15(rand.Reader, key, crypto.SHA256, hashed[:])
+	if err != nil {
+		return "", errors.New("failed to sign message")
+	}
+
+	signatureBase64 := base64.StdEncoding.EncodeToString(signature)
+
+	return signatureBase64, nil
+}
+
+func (service *ProvisioningService) createSignedString(nonce []byte, fwNonce []byte, privateKey crypto.PrivateKey) (string, error) {
+	arr := append(fwNonce, nonce...)
+	signature, err := service.signString(arr, privateKey)
+	if err != nil {
+		log.Error("Error signing string:", err)
+		return "", err
+	}
+	return signature, nil
+}
+
+func (service *ProvisioningService) sendAdminSetup(digestRealm string, nonce []byte, signature string) (int, error) {
+	password := service.config.ACMSettings.AMTPassword
+	message := service.ipsMessages.HostBasedSetupService.AdminSetup(hostbasedsetup.AdminPassEncryptionTypeHTTPDigestMD5A1, digestRealm, password, base64.StdEncoding.EncodeToString(nonce), hostbasedsetup.SigningAlgorithmRSASHA2256, signature)
 	log.Info(message)
 	response, err := service.client.Post(message)
 	tempstring := string(response)
 	log.Info(tempstring)
 	if err != nil {
-		return err
+		return -1, err
 	}
-	var getHostBasedSetupResponse hostbasedsetup.Response
-	err = xml.Unmarshal([]byte(response), &getHostBasedSetupResponse)
+	var hostBasedSetupResponse hostbasedsetup.Response
+	err = xml.Unmarshal([]byte(response), &hostBasedSetupResponse)
 	if err != nil {
-		return err
+		return -1, err
 	}
-	return nil
+	if hostBasedSetupResponse.Body.Setup_OUTPUT.ReturnValue != 0 {
+		return -1, errors.New("unable to activate ACM")
+	}
+	return utils.Success, nil
 }
+
+
+
+
+
+
+
