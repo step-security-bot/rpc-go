@@ -81,44 +81,6 @@ func TestHandleLocalDeactivation(t *testing.T) {
 	assert.Equal(t, errCode, utils.Success)
 }
 
-// TODO: move to local package
-//func TestHandleDeactivateCommandWithGetControlModeError(t *testing.T) {
-//	args := []string{"./rpc", "deactivate", "-local"}
-//	flags := NewFlags(args)
-//	flags.amtCommand.PTHI = MockPTHICommands{}
-//	mode = 1
-//	result = 0
-//	controlModeErr = errors.New("Failed to get control mode")
-//	errCode := flags.handleDeactivateCommand()
-//	assert.Equal(t, errCode, utils.DeactivationFailed)
-//	mode = 0
-//}
-//
-//func TestHandleLocalDeactivationwithUnprovisionError(t *testing.T) {
-//	args := []string{"./rpc", "deactivate", "-local"}
-//	flags := NewFlags(args)
-//	flags.amtCommand.PTHI = MockPTHICommands{}
-//	mode = 1
-//	result = -1
-//	controlModeErr = nil
-//	errCode := flags.handleLocalDeactivation()
-//	assert.Equal(t, errCode, utils.DeactivationFailed)
-//	result = 0
-//	mode = 0
-//}
-//
-//func TestHandleDeactivationWithLocal(t *testing.T) {
-//	args := []string{"./rpc", "deactivate", "-local"}
-//	flags := NewFlags(args)
-//	flags.amtCommand.PTHI = MockPTHICommands{}
-//	mode = 1
-//	result = 0
-//	controlModeErr = nil
-//	errCode := flags.handleDeactivateCommand()
-//	assert.Equal(t, errCode, utils.Success)
-//	mode = 0
-//}
-
 func TestParseFlagsDeactivate(t *testing.T) {
 	args := []string{"./rpc", "deactivate"}
 	flags := NewFlags(args)

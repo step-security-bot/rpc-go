@@ -42,37 +42,6 @@ func runRPC(args []string) int {
 	return resultCode
 }
 
-//func handleFlags(args []string) (*flags.Flags, bool, int) {
-//	//process flags
-//	flags := flags.NewFlags(args)
-//	_, keepgoing, result := flags.ParseFlags()
-//	if !keepgoing {
-//		return nil, false, result
-//	}
-//
-//	if flags.Verbose {
-//		log.SetLevel(log.TraceLevel)
-//	} else {
-//		lvl, err := log.ParseLevel(flags.LogLevel)
-//		if err != nil {
-//			log.Warn(err)
-//			log.SetLevel(log.InfoLevel)
-//		} else {
-//			log.SetLevel(lvl)
-//		}
-//	}
-//
-//	if flags.JsonOutput {
-//		log.SetFormatter(&log.JSONFormatter{})
-//	} else {
-//		log.SetFormatter(&log.TextFormatter{
-//			DisableColors: true,
-//			FullTimestamp: true,
-//		})
-//	}
-//	return flags, true, utils.Success
-//}
-
 func parseCommandLine(args []string) (*flags.Flags, int) {
 	//process flags
 	flags := flags.NewFlags(args)
@@ -102,17 +71,17 @@ func parseCommandLine(args []string) (*flags.Flags, int) {
 }
 
 func main() {
-	// status, err := checkAccess()
-	// if status != utils.Success {
-	// 	if err != nil {
-	// 		log.Error(err.Error())
-	// 	}
-	// 	log.Error(AccessErrMsg)
-	// 	os.Exit(status)
-	// }
-	_ = runRPC(os.Args)
-	// if err != nil {
-	// 	log.Error(err.Error())
-	// }
-	// os.Exit(status)
+	status, err := checkAccess()
+	if status != utils.Success {
+		if err != nil {
+			log.Error(err.Error())
+		}
+		log.Error(AccessErrMsg)
+		os.Exit(status)
+	}
+	status = runRPC(os.Args)
+	if err != nil {
+		log.Error(err.Error())
+	}
+	os.Exit(status)
 }

@@ -2,8 +2,6 @@ package flags
 
 import (
 	"fmt"
-	log "github.com/sirupsen/logrus"
-	"reflect"
 	"regexp"
 	"rpc/pkg/utils"
 )
@@ -52,28 +50,6 @@ func (f *Flags) handleActivateCommand() int {
 		fmt.Println("provide either a 'url' or a 'local', but not both")
 		return utils.InvalidParameters
 	}
-	if f.Local {
-		if !f.UseCCM && !f.UseACM || f.UseCCM && f.UseACM {
-			fmt.Println("must specify -ccm or -acm, but not both")
-			return utils.InvalidParameters
-		}
-
-		if f.UseACM {
-			resultCode := f.handleLocalConfig()
-			if resultCode != utils.Success {
-				return resultCode
-			}
-			// Check if all fields are filled
-			v := reflect.ValueOf(f.LocalConfig.ACMSettings)
-			for i := 0; i < v.NumField(); i++ {
-				if v.Field(i).Interface() == "" { // not checking 0 since authenticantProtocol can and needs to be 0 for EAP-TLS
-					log.Error("Missing value for field: ", v.Type().Field(i).Name)
-					return utils.IncorrectCommandLineParameters
-				}
-			}
-
-		}
-	}
 
 	if !f.Local {
 		if f.URL == "" {
@@ -87,7 +63,6 @@ func (f *Flags) handleActivateCommand() int {
 			return utils.MissingOrIncorrectProfile
 		}
 	} else {
-		f.Password = "P@ssw0rd" //Remove it
 		if f.Password == "" {
 			if _, errCode := f.ReadPasswordFromUser(); errCode != 0 {
 				return utils.MissingOrIncorrectPassword

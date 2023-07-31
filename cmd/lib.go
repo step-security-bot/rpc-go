@@ -46,9 +46,6 @@ func rpcExec(Input *C.char, Output **C.char) int {
 	args = append([]string{"rpc"}, args...)
 	runStatus := runRPC(args)
 	if runStatus != utils.Success {
-		if err != nil {
-			log.Error(err.Error())
-		}
 		*Output = C.CString("rpcExec failed: " + inputString)
 	}
 	return runStatus

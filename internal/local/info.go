@@ -5,7 +5,6 @@ import (
 	"fmt"
 	log "github.com/sirupsen/logrus"
 	"os"
-	"rpc/internal/amt"
 	"rpc/pkg/utils"
 	"strconv"
 	"strings"
@@ -14,9 +13,8 @@ import (
 func (service *ProvisioningService) DisplayAMTInfo() int {
 	dataStruct := make(map[string]interface{})
 
-	amtCommand := amt.NewAMTCommand()
 	if service.flags.AmtInfo.Ver {
-		result, err := amtCommand.GetVersionDataFromME("AMT", service.flags.AMTTimeoutDuration)
+		result, err := service.amtCommand.GetVersionDataFromME("AMT", service.flags.AMTTimeoutDuration)
 		if err != nil {
 			log.Error(err)
 		}
@@ -26,7 +24,7 @@ func (service *ProvisioningService) DisplayAMTInfo() int {
 		}
 	}
 	if service.flags.AmtInfo.Bld {
-		result, err := amtCommand.GetVersionDataFromME("Build Number", service.flags.AMTTimeoutDuration)
+		result, err := service.amtCommand.GetVersionDataFromME("Build Number", service.flags.AMTTimeoutDuration)
 		if err != nil {
 			log.Error(err)
 		}
@@ -37,7 +35,7 @@ func (service *ProvisioningService) DisplayAMTInfo() int {
 		}
 	}
 	if service.flags.AmtInfo.Sku {
-		result, err := amtCommand.GetVersionDataFromME("Sku", service.flags.AMTTimeoutDuration)
+		result, err := service.amtCommand.GetVersionDataFromME("Sku", service.flags.AMTTimeoutDuration)
 		if err != nil {
 			log.Error(err)
 		}
@@ -55,7 +53,7 @@ func (service *ProvisioningService) DisplayAMTInfo() int {
 		}
 	}
 	if service.flags.AmtInfo.UUID {
-		result, err := amtCommand.GetUUID()
+		result, err := service.amtCommand.GetUUID()
 		if err != nil {
 			log.Error(err)
 		}
@@ -66,7 +64,7 @@ func (service *ProvisioningService) DisplayAMTInfo() int {
 		}
 	}
 	if service.flags.AmtInfo.Mode {
-		result, err := amtCommand.GetControlMode()
+		result, err := service.amtCommand.GetControlMode()
 		if err != nil {
 			log.Error(err)
 		}
@@ -77,7 +75,7 @@ func (service *ProvisioningService) DisplayAMTInfo() int {
 		}
 	}
 	if service.flags.AmtInfo.DNS {
-		result, err := amtCommand.GetDNSSuffix()
+		result, err := service.amtCommand.GetDNSSuffix()
 		if err != nil {
 			log.Error(err)
 		}
@@ -86,7 +84,7 @@ func (service *ProvisioningService) DisplayAMTInfo() int {
 		if !service.flags.JsonOutput {
 			println("DNS Suffix		: " + string(result))
 		}
-		result, err = amtCommand.GetOSDNSSuffix()
+		result, err = service.amtCommand.GetOSDNSSuffix()
 		if err != nil {
 			log.Error(err)
 		}
@@ -108,7 +106,7 @@ func (service *ProvisioningService) DisplayAMTInfo() int {
 	}
 
 	if service.flags.AmtInfo.Ras {
-		result, err := amtCommand.GetRemoteAccessConnectionStatus()
+		result, err := service.amtCommand.GetRemoteAccessConnectionStatus()
 		if err != nil {
 			log.Error(err)
 		}
@@ -122,7 +120,7 @@ func (service *ProvisioningService) DisplayAMTInfo() int {
 		}
 	}
 	if service.flags.AmtInfo.Lan {
-		wired, err := amtCommand.GetLANInterfaceSettings(false)
+		wired, err := service.amtCommand.GetLANInterfaceSettings(false)
 		if err != nil {
 			log.Error(err)
 		}
@@ -137,7 +135,7 @@ func (service *ProvisioningService) DisplayAMTInfo() int {
 			println("MAC Address  		: " + wired.MACAddress)
 		}
 
-		wireless, err := amtCommand.GetLANInterfaceSettings(true)
+		wireless, err := service.amtCommand.GetLANInterfaceSettings(true)
 		if err != nil {
 			log.Error(err)
 		}
@@ -153,7 +151,7 @@ func (service *ProvisioningService) DisplayAMTInfo() int {
 		}
 	}
 	if service.flags.AmtInfo.Cert {
-		result, err := amtCommand.GetCertificateHashes()
+		result, err := service.amtCommand.GetCertificateHashes()
 		if err != nil {
 			log.Error(err)
 		}

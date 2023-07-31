@@ -11,6 +11,7 @@ import (
 	"rpc/internal/amt"
 	"rpc/pkg/utils"
 
+	"github.com/ilyakaznacheev/cleanenv"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -114,9 +115,12 @@ func (f *Flags) handleAddWifiSettings() int {
 	if f.JsonOutput {
 		log.SetFormatter(&log.JSONFormatter{})
 	}
-	resultCode := f.handleLocalConfig()
-	if resultCode != utils.Success {
-		return resultCode
+	if f.configContent != "" {
+		err := cleanenv.ReadConfig(f.configContent, &f.LocalConfig)
+		if err != nil {
+			log.Error("config error: ", err)
+			return utils.IncorrectCommandLineParameters
+		}
 	}
 	// Check if all fields are filled
 	v := reflect.ValueOf(f.LocalConfig.IEEE8021XSettings)

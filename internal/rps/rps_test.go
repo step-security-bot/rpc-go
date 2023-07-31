@@ -50,6 +50,14 @@ func init() {
 	testFlags.URL = testUrl
 }
 
+func TestExecuteCommand(t *testing.T) {
+	f := &flags.Flags{}
+	f.Command = utils.CommandActivate
+	f.Profile = "profile01"
+	resultCode := ExecuteCommand(f)
+	assert.NotEqual(t, utils.Success, resultCode)
+}
+
 func TestSetCommandMethodActivate(t *testing.T) {
 	f := &flags.Flags{}
 	f.Command = utils.CommandActivate
