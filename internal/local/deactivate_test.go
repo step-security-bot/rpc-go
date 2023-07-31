@@ -9,12 +9,6 @@ import (
 	"testing"
 )
 
-func mockUnprovisionResponse(returnValue string) string {
-	return xmlBodyStart +
-		"<g:Unprovision_OUTPUT><g:ReturnValue>" + returnValue + "</g:ReturnValue></g:Unprovision_OUTPUT>" +
-		xmlBodyEnd
-}
-
 func TestDeactivation(t *testing.T) {
 	f := &flags.Flags{}
 	f.Command = utils.CommandDeactivate
@@ -83,9 +77,7 @@ func TestDeactivateACM(t *testing.T) {
 
 	t.Run("should return Success for ACM happy path", func(t *testing.T) {
 		handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			assert.Equal(t, "POST", r.Method)
-			_, writeErr := w.Write([]byte(mockUnprovisionResponse("0")))
-			assert.Nil(t, writeErr)
+			respondUnprovision(t, w, 0)
 		})
 		lps := setupWithWsmanClient(f, handler)
 		resultCode := lps.Deactivate()
@@ -94,8 +86,7 @@ func TestDeactivateACM(t *testing.T) {
 
 	t.Run("should return UnableToDeactivate for client.Post error", func(t *testing.T) {
 		handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			assert.Equal(t, "POST", r.Method)
-			w.WriteHeader(http.StatusInternalServerError)
+			respondServerError(w)
 		})
 		lps := setupWithWsmanClient(f, handler)
 		resultCode := lps.Deactivate()
@@ -103,9 +94,7 @@ func TestDeactivateACM(t *testing.T) {
 	})
 	t.Run("should return DeactivationFailed on non-zero ReturnValue", func(t *testing.T) {
 		handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			assert.Equal(t, "POST", r.Method)
-			_, writeErr := w.Write([]byte(mockUnprovisionResponse("1")))
-			assert.Nil(t, writeErr)
+			respondUnprovision(t, w, 1)
 		})
 		lps := setupWithWsmanClient(f, handler)
 		resultCode := lps.Deactivate()

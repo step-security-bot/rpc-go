@@ -1,6 +1,10 @@
 package local
 
 import (
+	"encoding/xml"
+	"github.com/open-amt-cloud-toolkit/go-wsman-messages/pkg/amt/general"
+	"github.com/open-amt-cloud-toolkit/go-wsman-messages/pkg/amt/setupandconfiguration"
+	"github.com/open-amt-cloud-toolkit/go-wsman-messages/pkg/ips/hostbasedsetup"
 	"github.com/stretchr/testify/assert"
 	"net/http"
 	"net/http/httptest"
@@ -10,18 +14,6 @@ import (
 	"testing"
 	"time"
 )
-
-// xml response
-const xmlBodyStart = `<?xml version="1.0" encoding="UTF-8"?>
-	<a:Envelope>
-	<a:Header>
-		<b:Action a:mustUnderstand="true">http://fakeURI</b:Action>
-		<b:RelatesTo>0</b:RelatesTo>
-		<b:MessageID>uuid:00000000-8086-8086-8086-00000003A89B</b:MessageID>
-		<c:ResourceURI>http://fakeURI</c:ResourceURI>
-	</a:Header>
-    <a:Body>`
-const xmlBodyEnd = `</a:Body></a:Envelope>`
 
 // Mock the AMT Hardware
 type MockAMT struct{}
@@ -41,15 +33,7 @@ func (c MockAMT) GetControlMode() (int, error)    { return mockControlMode, mock
 func (c MockAMT) GetOSDNSSuffix() (string, error) { return "", nil }
 func (c MockAMT) GetDNSSuffix() (string, error)   { return "", nil }
 
-var mockCertHashes = []amt2.CertHashEntry{
-	{
-		Hash:      "ABCDEFG",
-		Name:      "fakecert",
-		Algorithm: "SHA256",
-		IsActive:  true,
-		IsDefault: true,
-	},
-}
+var mockCertHashes []amt2.CertHashEntry
 
 func (c MockAMT) GetCertificateHashes() ([]amt2.CertHashEntry, error) {
 	return mockCertHashes, nil
@@ -78,11 +62,16 @@ func setupService(f *flags.Flags) ProvisioningService {
 	return service
 }
 
-func setupWithWsmanClient(f *flags.Flags, handler http.Handler) ProvisioningService {
-	server := httptest.NewServer(handler)
+func setupWithTestServer(f *flags.Flags, handler http.Handler) ProvisioningService {
 	service := setupService(f)
+	server := httptest.NewServer(handler)
 	service.serverURL = server.URL
-	service.setupWsmanClient("admin", f.Password)
+	return service
+}
+
+func setupWithWsmanClient(f *flags.Flags, handler http.Handler) ProvisioningService {
+	service := setupWithTestServer(f, handler)
+	service.setupWsmanClient("admin", "password")
 	return service
 }
 
@@ -106,5 +95,39 @@ func TestExecute(t *testing.T) {
 		resultCode := ExecuteCommand(f)
 		assert.Equal(t, utils.InvalidParameters, resultCode)
 	})
+}
 
+func respondServerError(w http.ResponseWriter) {
+	w.WriteHeader(http.StatusInternalServerError)
+}
+
+func respondBadXML(t *testing.T, w http.ResponseWriter) {
+	_, err := w.Write([]byte(`not really xml is it?`))
+	assert.Nil(t, err)
+}
+
+func respondGeneralSettings(t *testing.T, w http.ResponseWriter) {
+	rsp := general.Response{}
+	xmlString, err := xml.Marshal(rsp)
+	assert.Nil(t, err)
+	_, err = w.Write(xmlString)
+	assert.Nil(t, err)
+}
+
+func respondHostBasedSetup(t *testing.T, w http.ResponseWriter, value int) {
+	rsp := hostbasedsetup.Response{}
+	rsp.Body.Setup_OUTPUT.ReturnValue = value
+	xmlString, err := xml.Marshal(rsp)
+	assert.Nil(t, err)
+	_, err = w.Write(xmlString)
+	assert.Nil(t, err)
+}
+
+func respondUnprovision(t *testing.T, w http.ResponseWriter, value int) {
+	rsp := setupandconfiguration.UnprovisionResponse{}
+	rsp.Body.Unprovision_OUTPUT.ReturnValue = value
+	xmlString, err := xml.Marshal(rsp)
+	assert.Nil(t, err)
+	_, err = w.Write(xmlString)
+	assert.Nil(t, err)
 }
