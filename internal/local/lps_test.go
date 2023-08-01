@@ -106,27 +106,28 @@ func respondBadXML(t *testing.T, w http.ResponseWriter) {
 	assert.Nil(t, err)
 }
 
+var mockGenerlSettingsResponse = general.Response{}
+
 func respondGeneralSettings(t *testing.T, w http.ResponseWriter) {
-	rsp := general.Response{}
-	xmlString, err := xml.Marshal(rsp)
+	xmlString, err := xml.Marshal(mockGenerlSettingsResponse)
 	assert.Nil(t, err)
 	_, err = w.Write(xmlString)
 	assert.Nil(t, err)
 }
 
-func respondHostBasedSetup(t *testing.T, w http.ResponseWriter, value int) {
-	rsp := hostbasedsetup.Response{}
-	rsp.Body.Setup_OUTPUT.ReturnValue = value
-	xmlString, err := xml.Marshal(rsp)
+var mockHostBasedSetupResponse = hostbasedsetup.Response{}
+
+func respondHostBasedSetup(t *testing.T, w http.ResponseWriter) {
+	xmlString, err := xml.Marshal(mockHostBasedSetupResponse)
 	assert.Nil(t, err)
 	_, err = w.Write(xmlString)
 	assert.Nil(t, err)
 }
 
-func respondUnprovision(t *testing.T, w http.ResponseWriter, value int) {
-	rsp := setupandconfiguration.UnprovisionResponse{}
-	rsp.Body.Unprovision_OUTPUT.ReturnValue = value
-	xmlString, err := xml.Marshal(rsp)
+var mockUnprovisionResponse = setupandconfiguration.UnprovisionResponse{}
+
+func respondUnprovision(t *testing.T, w http.ResponseWriter) {
+	xmlString, err := xml.Marshal(mockUnprovisionResponse)
 	assert.Nil(t, err)
 	_, err = w.Write(xmlString)
 	assert.Nil(t, err)

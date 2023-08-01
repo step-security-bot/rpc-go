@@ -77,7 +77,7 @@ func TestDeactivateACM(t *testing.T) {
 
 	t.Run("should return Success for ACM happy path", func(t *testing.T) {
 		handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			respondUnprovision(t, w, 0)
+			respondUnprovision(t, w)
 		})
 		lps := setupWithWsmanClient(f, handler)
 		resultCode := lps.Deactivate()
@@ -94,7 +94,9 @@ func TestDeactivateACM(t *testing.T) {
 	})
 	t.Run("should return DeactivationFailed on non-zero ReturnValue", func(t *testing.T) {
 		handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			respondUnprovision(t, w, 1)
+			mockUnprovisionResponse.Body.Unprovision_OUTPUT.ReturnValue = 1
+			respondUnprovision(t, w)
+			mockUnprovisionResponse.Body.Unprovision_OUTPUT.ReturnValue = 0
 		})
 		lps := setupWithWsmanClient(f, handler)
 		resultCode := lps.Deactivate()
