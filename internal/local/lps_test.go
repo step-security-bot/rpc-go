@@ -2,6 +2,7 @@ package local
 
 import (
 	"encoding/xml"
+	"errors"
 	"github.com/open-amt-cloud-toolkit/go-wsman-messages/pkg/amt/general"
 	"github.com/open-amt-cloud-toolkit/go-wsman-messages/pkg/amt/setupandconfiguration"
 	"github.com/open-amt-cloud-toolkit/go-wsman-messages/pkg/ips/hostbasedsetup"
@@ -18,31 +19,57 @@ import (
 // Mock the AMT Hardware
 type MockAMT struct{}
 
+var mockStandardErr error = errors.New("yep, it failed")
+
 func (c MockAMT) Initialize() (int, error) {
 	return utils.Success, nil
 }
+
+var mockVersionDataErr error = nil
+
 func (c MockAMT) GetVersionDataFromME(key string, amtTimeout time.Duration) (string, error) {
-	return "Version", nil
+	return "Version", mockVersionDataErr
 }
-func (c MockAMT) GetUUID() (string, error) { return "123-456-789", nil }
+
+var mockUUID = "123-456-789"
+var mockUUIDErr error = nil
+
+func (c MockAMT) GetUUID() (string, error) { return mockUUID, mockUUIDErr }
 
 var mockControlMode = 0
 var mockControlModeErr error = nil
 
-func (c MockAMT) GetControlMode() (int, error)    { return mockControlMode, mockControlModeErr }
-func (c MockAMT) GetOSDNSSuffix() (string, error) { return "", nil }
-func (c MockAMT) GetDNSSuffix() (string, error)   { return "", nil }
+func (c MockAMT) GetControlMode() (int, error) { return mockControlMode, mockControlModeErr }
+
+var mockDNSSuffix = "dns.org"
+var mockDNSSuffixErr error = nil
+
+func (c MockAMT) GetDNSSuffix() (string, error) { return mockDNSSuffix, mockDNSSuffixErr }
+
+var mockOSDNSSuffix = "os.dns.org"
+var mockOSDNSSuffixErr error = nil
+
+func (c MockAMT) GetOSDNSSuffix() (string, error) { return mockOSDNSSuffix, mockOSDNSSuffixErr }
 
 var mockCertHashes []amt2.CertHashEntry
+var mockCertHashesErr error = nil
 
 func (c MockAMT) GetCertificateHashes() ([]amt2.CertHashEntry, error) {
-	return mockCertHashes, nil
+	return mockCertHashes, mockCertHashesErr
 }
+
+var mockRemoteAcessConnectionStatus = amt2.RemoteAccessStatus{}
+var mockRemoteAcessConnectionStatusErr error = nil
+
 func (c MockAMT) GetRemoteAccessConnectionStatus() (amt2.RemoteAccessStatus, error) {
-	return amt2.RemoteAccessStatus{}, nil
+	return mockRemoteAcessConnectionStatus, mockRemoteAcessConnectionStatusErr
 }
+
+var mockLANInterfaceSettings = amt2.InterfaceSettings{}
+var mockLANInterfaceSettingsErr error = nil
+
 func (c MockAMT) GetLANInterfaceSettings(useWireless bool) (amt2.InterfaceSettings, error) {
-	return amt2.InterfaceSettings{}, nil
+	return mockLANInterfaceSettings, mockLANInterfaceSettingsErr
 }
 
 var mockLocalSystemAccountErr error = nil

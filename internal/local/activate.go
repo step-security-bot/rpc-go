@@ -40,10 +40,6 @@ func (service *ProvisioningService) Activate() int {
 	}
 	service.setupWsmanClient(lsa.Username, lsa.Password)
 
-	// CCM is the only option supported currently
-	// (and is not required on the command line?)
-	service.flags.UseACM = true
-
 	resultCode := utils.Success
 
 	if service.flags.UseACM {
@@ -63,13 +59,13 @@ func (service *ProvisioningService) ActivateACM() int {
 		}
 		return false
 	}
-    // Extract the provisioning certificate
+	// Extract the provisioning certificate
 	certObject, fingerPrint, err := service.GetProvisioningCertObj()
 	log.Info(certObject, fingerPrint)
 	if checkErrorAndLog(err) {
 		return utils.ActivationFailed
 	}
-    // Check provisioning certificate is accepted by AMT
+	// Check provisioning certificate is accepted by AMT
 	if checkErrorAndLog(service.CompareCertHashes(fingerPrint)) {
 		return utils.ActivationFailed
 	}
@@ -100,7 +96,6 @@ func (service *ProvisioningService) ActivateACM() int {
 		return utils.ActivationFailed
 	}
 
-
 	signedSignature, err := service.createSignedString(nonce, fwNonce, certObject.privateKey)
 	log.Info(signedSignature)
 	if checkErrorAndLog(err) {
@@ -111,7 +106,7 @@ func (service *ProvisioningService) ActivateACM() int {
 	if checkErrorAndLog(err) {
 		return utils.ActivationFailed
 	}
-	
+
 	if checkErrorAndLog(service.injectCertificate(certObject.certChain)) {
 		return utils.ActivationFailed
 	}
@@ -272,14 +267,14 @@ func (service *ProvisioningService) GetProvisioningCertObj() (ProvisioningCertOb
 	return result, fingerprint, nil
 }
 
-func (service *ProvisioningService) CompareCertHashes(fingerPrint string) (error) {
+func (service *ProvisioningService) CompareCertHashes(fingerPrint string) error {
 	result, err := service.amtCommand.GetCertificateHashes()
 	if err != nil {
 		log.Error(err)
 	}
 	for _, v := range result {
-		if(v.Hash == fingerPrint) {
-		 return nil	
+		if v.Hash == fingerPrint {
+			return nil
 		}
 	}
 	return errors.New("The root of the provisioning certificate does not match any of the trusted roots in AMT.")
@@ -302,7 +297,7 @@ func (service *ProvisioningService) injectCertificate(certChain []string) error 
 	return nil
 }
 
-func (service *ProvisioningService) AddNextCertInChain(cert string, isLeaf bool, isRoot bool)  (error) {
+func (service *ProvisioningService) AddNextCertInChain(cert string, isLeaf bool, isRoot bool) error {
 	message := service.ipsMessages.HostBasedSetupService.AddNextCertInChain(cert, isLeaf, isRoot)
 	response, err := service.client.Post(message)
 	if err != nil {
@@ -312,7 +307,7 @@ func (service *ProvisioningService) AddNextCertInChain(cert string, isLeaf bool,
 	err = xml.Unmarshal([]byte(response), &addCertResponse)
 	if err != nil {
 		return err
-	} 
+	}
 	// if hostBasedSetupResponse.Body.AdminSetup_OUTPUT.ReturnValue != 0 {
 	// 	return -1, errors.New("unable to activate ACM")
 	// }
@@ -337,10 +332,10 @@ func (service *ProvisioningService) signString(message []byte, privateKey crypto
 	keyBytes := x509.MarshalPKCS1PrivateKey(rsaKey)
 	privatekeyPEM := pem.EncodeToMemory(
 		&pem.Block{
-				Type:  "RSA PRIVATE KEY",
-				Bytes: keyBytes,
+			Type:  "RSA PRIVATE KEY",
+			Bytes: keyBytes,
 		},
-    )
+	)
 	block, _ := pem.Decode([]byte(string(privatekeyPEM)))
 	if block == nil {
 		return "", errors.New("failed to decode PEM block containing private key")
@@ -391,10 +386,3 @@ func (service *ProvisioningService) sendAdminSetup(digestRealm string, nonce []b
 	// }
 	return utils.Success, nil
 }
-
-
-
-
-
-
-
